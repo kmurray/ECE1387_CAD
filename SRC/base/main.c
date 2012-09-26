@@ -3,6 +3,7 @@
 #include <argparse.h>
 #include <parse_input.h>
 #include <draw.h>
+#include <rr_graph.h>
 
 t_FPGA* FPGA;
 
@@ -18,7 +19,13 @@ int main (int argc, char** argv) {
         printf("Netlist file: %s\n", args.netlist_file);
     }
 
-    FPGA = parse_netlist( args.netlist_file); 
+    //Read in the netlist file and generate the basic FPGA structures
+    FPGA = parse_netlist(args.netlist_file); 
+
+    //Generate the Routing Resource Graph
+    /*generate_rr_graph(FPGA);*/
+
+
 
     start_interactive_graphics(); 
 

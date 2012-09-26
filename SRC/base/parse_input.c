@@ -117,9 +117,28 @@ t_blocklist* allocate_blocklist(t_FPGA* FPGA) {
     size_t cnt = 0;
     for (y_coord = 1; y_coord <= FPGA->grid_size; y_coord++) {
         for (x_coord = 1; x_coord <= FPGA->grid_size; x_coord++) {
-            blocklist->array_of_blocks[cnt] = my_malloc(sizeof(t_block));
-            blocklist->array_of_blocks[cnt]->x_coord = x_coord;
-            blocklist->array_of_blocks[cnt]->y_coord = y_coord;
+            t_block* block = my_malloc(sizeof(t_block));
+            block->x_coord = x_coord;
+            block->y_coord = y_coord;
+          
+            //The four sides of the block
+            block->array_of_pins = my_calloc(sizeof(t_pin**), 4);
+
+            //The CLB_NUM_PINS_PER_SIDE 
+            t_CLB_SIDE side;
+
+            //Clockwise around the block
+            for(side = RIGHT; side <= TOP; side++) {
+                block->array_of_pins[side] = my_calloc(sizeof(t_pin*), CLB_NUM_PINS_PER_SIDE);
+                int side_pin_cnt;
+                for(side_pin_cnt = 0; side_pin_cnt < CLB_NUM_PINS_PER_SIDE; side_pin_cnt++) {
+                    //Allocate each pin
+                    block->array_of_pins[side][side_pin_cnt] = my_malloc(sizeof(t_pin));
+                }
+            }
+
+
+            blocklist->array_of_blocks[cnt] = block;
             cnt++;
         }
     }

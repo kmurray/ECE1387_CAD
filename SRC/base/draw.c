@@ -36,8 +36,6 @@ static void draw_screen(void) {
     drawline(world_dim,world_dim,0.,world_dim);
     drawline(world_dim,world_dim,world_dim,0.);
 
-
-
     int corner_x_offset = (CLB_LEN / 2) + channel_spacing;
     int corner_y_offset = corner_x_offset;
 
@@ -49,6 +47,43 @@ static void draw_screen(void) {
             int rect_y = corner_y_offset + (block_y_coord-1)*(CLB_LEN + channel_spacing);
 
             drawrect (rect_x, rect_y, rect_x + CLB_LEN,rect_y + CLB_LEN);
+
+            int wire_pair_cnt;
+            for (wire_pair_cnt = 0; wire_pair_cnt < number_of_wire_pairs; wire_pair_cnt++) {
+                int i;
+                for(i = 0; i < 2; i++) {
+                   
+                    //NOTE: lots of over-draw, will fix when colouring routing
+
+                    //Left side of CLB
+                    int line_x_start = rect_x - NON_PAIRED_WIRE_SPACING - i*PAIRED_WIRE_SPACING - (NON_PAIRED_WIRE_SPACING + PAIRED_WIRE_SPACING)*wire_pair_cnt;
+                    int line_x_end = line_x_start;
+                    int line_y_start = rect_y - WIRE_EXTENSION_BEYOND_CLB ;
+                    int line_y_end = rect_y + CLB_LEN + WIRE_EXTENSION_BEYOND_CLB;
+                    drawline(line_x_start, line_y_start, line_x_end, line_y_end);
+
+                    //Right side of CLB
+                    line_x_start = rect_x + CLB_LEN + NON_PAIRED_WIRE_SPACING + i*PAIRED_WIRE_SPACING + (NON_PAIRED_WIRE_SPACING + PAIRED_WIRE_SPACING)*wire_pair_cnt;
+                    line_x_end = line_x_start;
+                    line_y_start = rect_y - WIRE_EXTENSION_BEYOND_CLB;
+                    line_y_end = rect_y + CLB_LEN + WIRE_EXTENSION_BEYOND_CLB;
+                    drawline(line_x_start, line_y_start, line_x_end, line_y_end);
+
+                    //Top of CLB
+                    line_x_start = rect_x - WIRE_EXTENSION_BEYOND_CLB;
+                    line_x_end = rect_x + CLB_LEN + WIRE_EXTENSION_BEYOND_CLB;
+                    line_y_start = rect_y + CLB_LEN + NON_PAIRED_WIRE_SPACING + i*PAIRED_WIRE_SPACING + (NON_PAIRED_WIRE_SPACING + PAIRED_WIRE_SPACING)*wire_pair_cnt;
+                    line_y_end = line_y_start;
+                    drawline(line_x_start, line_y_start, line_x_end, line_y_end);
+
+                    //Bottom of CLB
+                    line_x_start = rect_x - WIRE_EXTENSION_BEYOND_CLB;
+                    line_x_end = rect_x + CLB_LEN + WIRE_EXTENSION_BEYOND_CLB;
+                    line_y_start = rect_y - NON_PAIRED_WIRE_SPACING - i*PAIRED_WIRE_SPACING - (NON_PAIRED_WIRE_SPACING + PAIRED_WIRE_SPACING)*wire_pair_cnt;
+                    line_y_end = line_y_start;
+                    drawline(line_x_start, line_y_start, line_x_end, line_y_end);
+                }
+            }
 
             char buf[50];
             snprintf(buf, sizeof(buf), "%d,%d", block_x_coord, block_y_coord);
