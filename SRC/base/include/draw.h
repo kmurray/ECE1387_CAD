@@ -11,5 +11,6 @@ void start_interactive_graphics(void);
 #define PAIRED_WIRE_SPACING 4
 #define NON_PAIRED_WIRE_SPACING 10
 #define WIRE_EXTENSION_BEYOND_CLB 7
+#define PIN_LENGTH 4
 
 #endif

@@ -4,6 +4,7 @@
 #include <parse_input.h>
 #include <assert.h>
 
+
 //================================================================================================
 // INTERNAL FUNCTION DECLARTAIONS 
 //================================================================================================
@@ -14,10 +15,10 @@ t_blocklist* allocate_blocklist(t_FPGA* FPGA);
 /*
  * Parse the input netlist file
  */
-t_FPGA* parse_netlist(const char* filename) {
+void parse_netlist(const char* filename) {
     FILE* fp = fopen(filename, "r");
 
-    t_FPGA* FPGA = my_malloc(sizeof(t_FPGA));
+    FPGA = my_malloc(sizeof(t_FPGA));
 
     //Temporary variables for global FPGA information
     int grid_size;
@@ -57,19 +58,13 @@ t_FPGA* parse_netlist(const char* filename) {
          */
 
         //Allocate and load the pins
-        t_pin* source_pin = my_malloc(sizeof(t_pin));
-        int block_index = get_block_index(FPGA, source_x_coord, source_y_coord); 
-        source_pin->block = (t_block*) blocklist->array_of_blocks[block_index];
+        t_pin* source_pin = get_block_pin(source_x_coord, source_y_coord, source_pin_num); 
         assert(source_pin->block->x_coord == source_x_coord);
         assert(source_pin->block->y_coord == source_y_coord);
-        source_pin->pin_num = source_pin_num;
 
-        t_pin* sink_pin = my_malloc(sizeof(t_pin));
-        block_index = get_block_index(FPGA, sink_x_coord, sink_y_coord); 
-        sink_pin->block = (t_block*) blocklist->array_of_blocks[block_index];
+        t_pin* sink_pin = get_block_pin(sink_x_coord, sink_y_coord, sink_pin_num); 
         assert(sink_pin->block->x_coord == sink_x_coord);
         assert(sink_pin->block->y_coord == sink_y_coord);
-        sink_pin->pin_num = sink_pin_num;
 
         //Allocate the net structure
         t_net* new_net = my_malloc(sizeof(t_net));
@@ -100,7 +95,6 @@ t_FPGA* parse_netlist(const char* filename) {
 
     fclose(fp);
 
-    return FPGA;
 }
 
 t_blocklist* allocate_blocklist(t_FPGA* FPGA) {
@@ -121,23 +115,31 @@ t_blocklist* allocate_blocklist(t_FPGA* FPGA) {
             block->x_coord = x_coord;
             block->y_coord = y_coord;
           
-            //The four sides of the block
-            block->array_of_pins = my_calloc(sizeof(t_pin**), 4);
+            //The pins of the block
+            block->num_pins  = CLB_SIDES_PER_BLOCK*CLB_NUM_PINS_PER_SIDE;
+            block->array_of_pins = my_calloc(sizeof(t_pin**), block->num_pins);
+             
 
-            //The CLB_NUM_PINS_PER_SIDE 
-            t_CLB_SIDE side;
 
-            //Clockwise around the block
-            for(side = RIGHT; side <= TOP; side++) {
-                block->array_of_pins[side] = my_calloc(sizeof(t_pin*), CLB_NUM_PINS_PER_SIDE);
-                int side_pin_cnt;
-                for(side_pin_cnt = 0; side_pin_cnt < CLB_NUM_PINS_PER_SIDE; side_pin_cnt++) {
-                    //Allocate each pin
-                    block->array_of_pins[side][side_pin_cnt] = my_malloc(sizeof(t_pin));
-                }
+            //Clockwise around the block, starting from right side
+            int pin_cnt;
+            for(pin_cnt = 0; pin_cnt < block->num_pins; pin_cnt++) {
+                //Allocate each pin
+                t_pin* pin = my_malloc(sizeof(t_pin));
+
+                //Put the pin in the array
+                block->array_of_pins[pin_cnt] = pin;
+
+                //Set pin values
+                pin->block = block;
+                pin->pin_num = pin_cnt;
+
+                //Allocate the array
+                pin->num_adjacent_wires = FPGA->W;
+                pin->array_of_adjacent_wires = my_calloc(sizeof(t_wire*), pin->num_adjacent_wires);
             }
 
-
+            //Add the block to the list
             blocklist->array_of_blocks[cnt] = block;
             cnt++;
         }

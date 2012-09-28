@@ -20,10 +20,11 @@ int main (int argc, char** argv) {
     }
 
     //Read in the netlist file and generate the basic FPGA structures
-    FPGA = parse_netlist(args.netlist_file); 
+    parse_netlist(args.netlist_file); 
+    FPGA->Fs = FPGA_FS;
 
     //Generate the Routing Resource Graph
-    /*generate_rr_graph(FPGA);*/
+    generate_rr_graph();
 
 
 

@@ -1,6 +1,8 @@
 #ifndef RR_GRAPH_H
 #define RR_GRAPH_H
 
-void generate_rr_graph(t_FPGA* FPGA);
+void generate_rr_graph(void);
+
+#define FPGA_FS 3
 
 #endif

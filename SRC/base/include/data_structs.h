@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 //There are two pins per side of the CLB
+#define CLB_SIDES_PER_BLOCK 4
 #define CLB_NUM_PINS_PER_SIDE 2
 
 /*
@@ -14,25 +15,43 @@ typedef struct s_pin t_pin;
 typedef struct s_net t_net;
 typedef struct s_netlist t_netlist;
 typedef struct s_blocklist t_blocklist;
+typedef struct s_switchblocklist t_switchblocklist;
 typedef struct s_wire t_wire;
 typedef struct s_switchblock t_switchblock;
 typedef struct s_rr_graph t_rr_graph;
 typedef struct s_FPGA t_FPGA;
 
+typedef enum e_boolean {FALSE = 0, TRUE} t_boolean;
+
 /*
  * An FPGA complex block
  */
-typedef enum e_CLB_SIDE {RIGHT = 0, BOTTOM, LEFT, TOP} t_CLB_SIDE;
+typedef enum e_SIDE {RIGHT = 0, BOTTOM, LEFT, TOP} t_SIDE;
 
 struct s_block {
     int x_coord;
     int y_coord;
     
-    t_pin*** array_of_pins; //The pins of this block from [0..3][0..CLB_NUM_PINS_PER_SIDE-1]
+    t_pin** array_of_pins; //The pins of this block from [0..num_pins-1]
                            //  NOTE: the pins are indexed first by the side they reside
                            //        upon.  Zero corresponds to the right side, and moves
                            //        clockwise around the CLB.
+    int num_pins; //The total number of pins on this block
 
+};
+
+struct s_switchblock {
+    //XY coordinates of the switchblock
+    // NOTE: these are indexed using channel coordinates not block coordinates
+    int x_coord;
+    int y_coord;
+
+    t_wire*** adjacency_list; //A two dimensional list describing the connections available in this switchblock
+                              // Indexed as  [source_wire][destination_wire]
+                              // Valid range [0..W-1][0..num_adjacencies[source_wire_index]]
+
+    int* num_adjacencies;    //The number of valid entries in the adjacency list
+    int* occupancy_list;    //The number of nets utilizing a specific connectin in the switchblock.  Indexed by channel wire number
 };
 
 /*
@@ -43,6 +62,7 @@ struct s_pin {
     int pin_num;
 
     t_wire** array_of_adjacent_wires; //The wires accessible from this pin [0..W-1], since Fc=1
+    int num_adjacent_wires; //Usually equal W
 
 };
 
@@ -75,6 +95,15 @@ struct s_blocklist {
 };
 
 /*
+ * The SwitchBlocks of the FPGA
+ */
+struct s_switchblocklist {
+    t_switchblock** array_of_switchblocks; //[0..num_switchblocks-1]
+    size_t num_switchblocks;
+};
+
+
+/*
  * A wire the routing resource graph
  */
 struct s_wire {
@@ -96,21 +125,10 @@ struct s_wire {
     int channel_pair_num; //Which pair of wires in the channel does this wire belong to
     int wire_num; //Wire number in the channel
 
-    int routing_label; //The label applied and quiried by the maze routing algorithm
+    int routing_label; //The label applied by the maze routing algorithm
 };
 
 
-struct s_switchblock {
-    //XY coordinates of the switchblock
-    // NOTE: these are indexed using channel coordinates not block coordinates
-    int x_coord;
-    int y_coord;
-
-    t_wire*** adjacency_list; //A two dimensional list describing the connections available in this switchblock
-                              // Indexed as  [source_wire][destination_wire]
-                              // Valid range [0..W-1][0..Fs-1], where W is the FPGA channel width
-    int Fs; //The degree of the switch block
-};
 
 struct s_rr_graph {
     t_net* first_net;
@@ -119,6 +137,7 @@ struct s_rr_graph {
 
 struct s_FPGA {
     t_blocklist* blocklist;
+    t_switchblocklist* switchblocklist;
     t_netlist* netlist;
 
     //The channel width
@@ -127,6 +146,8 @@ struct s_FPGA {
     //The number of CLBs along one edge
     // assumed to be a square FPGA
     int grid_size;
+
+    int Fs; //The degree of the switch block
 };
 
 #endif
