@@ -1,6 +1,7 @@
 #ifndef DATA_STRUCTS_H
 #define DATA_STRUCTS_H
 
+//For size_t
 #include <stdlib.h>
 
 //There are two pins per side of the CLB
@@ -19,6 +20,8 @@ typedef struct s_switchblocklist t_switchblocklist;
 typedef struct s_wire t_wire;
 typedef struct s_switchblock t_switchblock;
 typedef struct s_rr_graph t_rr_graph;
+typedef struct s_expansion_list t_expansion_list;
+typedef struct s_heap_node t_heap_node;
 typedef struct s_FPGA t_FPGA;
 
 typedef enum e_boolean {FALSE = 0, TRUE} t_boolean;
@@ -51,6 +54,8 @@ struct s_switchblock {
                               // Valid range [0..W-1][0..num_adjacencies[source_wire_index]]
 
     int* num_adjacencies;    //The number of valid entries in the adjacency list
+                             // Indexed from [0..W-1], need a seperate bound for each adjacency_list when building the lists
+                             // After construction is complete should all have the same bounds
     int* occupancy_list;    //The number of nets utilizing a specific connectin in the switchblock.  Indexed by channel wire number
 };
 
@@ -102,6 +107,11 @@ struct s_switchblocklist {
     size_t num_switchblocks;
 };
 
+/*
+ * Labels used during maze routing
+ */
+typedef enum e_ROUTING_LABEL {NONE = -1, TARGET, USED, CURRENT_EXPANSION} t_ROUTING_LABEL;
+
 
 /*
  * A wire the routing resource graph
@@ -125,15 +135,21 @@ struct s_wire {
     int channel_pair_num; //Which pair of wires in the channel does this wire belong to
     int wire_num; //Wire number in the channel
 
-    int routing_label; //The label applied by the maze routing algorithm
+    t_ROUTING_LABEL label; //The label applied by the maze routing algorithm
 };
 
 
-
-struct s_rr_graph {
-    t_net* first_net;
-
+struct s_expansion_list {
+    int heap_size;
+    t_heap_node* heap; // array of nodes[1..heap_size]
 };
+
+struct s_heap_node {
+    int key;
+
+    t_wire* wire;
+};
+
 
 struct s_FPGA {
     t_blocklist* blocklist;

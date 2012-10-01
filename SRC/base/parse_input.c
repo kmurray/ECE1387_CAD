@@ -135,8 +135,8 @@ t_blocklist* allocate_blocklist(t_FPGA* FPGA) {
                 pin->pin_num = pin_cnt;
 
                 //Allocate the array
-                pin->num_adjacent_wires = FPGA->W;
-                pin->array_of_adjacent_wires = my_calloc(sizeof(t_wire*), pin->num_adjacent_wires);
+                pin->num_adjacent_wires = 0;
+                pin->array_of_adjacent_wires = my_calloc(sizeof(t_wire*), FPGA->W);
             }
 
             //Add the block to the list

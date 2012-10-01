@@ -29,6 +29,11 @@ tags
 *.app
 
 ###############
+# system files
+###############
+.nfs*
+
+###############
 # generated files
 ###############
 kroute

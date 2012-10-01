@@ -4,8 +4,11 @@
 #include <parse_input.h>
 #include <draw.h>
 #include <rr_graph.h>
+#include <maze_route.h>
+
 
 t_FPGA* FPGA;
+
 
 int main (int argc, char** argv) {
     struct arguments args;
@@ -25,10 +28,12 @@ int main (int argc, char** argv) {
 
     //Generate the Routing Resource Graph
     generate_rr_graph();
+    verify_rr_graph();
 
-
+    route_netlist();
 
     start_interactive_graphics(); 
 
     return 0;
 }
+

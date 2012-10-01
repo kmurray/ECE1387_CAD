@@ -60,16 +60,18 @@ void generate_rr_graph(void) {
         }
     }
 
-    for(x_coord = 0; x_coord < FPGA->grid_size + 1; x_coord++) {
-        printf("Generating Vertical Routing  Channel %d\n", x_coord);
-        for(y_coord = 0; y_coord < FPGA->grid_size; y_coord++) {
-            int lower_x_coord = x_coord;
-            int lower_y_coord = y_coord;
-            t_switchblock* bottom_sb = get_sb(lower_x_coord, lower_y_coord);
-
-            dump_switchblock(bottom_sb);
-        }
-    }
+/*    //Uncomment for debug dump of rr_graph
+ *    for(x_coord = 0; x_coord < FPGA->grid_size + 1; x_coord++) {
+ *        printf("Generating Vertical Routing  Channel %d\n", x_coord);
+ *        for(y_coord = 0; y_coord < FPGA->grid_size; y_coord++) {
+ *            int lower_x_coord = x_coord;
+ *            int lower_y_coord = y_coord;
+ *            t_switchblock* bottom_sb = get_sb(lower_x_coord, lower_y_coord);
+ *
+ *            dump_switchblock(bottom_sb);
+ *        }
+ *    }
+ */
 
 
 
@@ -137,8 +139,14 @@ t_switchblock* allocate_switchblock(int x_coord, int y_coord) {
     int channel_wire_index;
     for(channel_wire_index = 0; channel_wire_index < FPGA->W; channel_wire_index++) {
         switchblock->adjacency_list[channel_wire_index] = my_calloc(sizeof(t_wire*), FPGA->Fs + 1);
-        switchblock->num_adjacencies[channel_wire_index] = 0;
-        switchblock->occupancy_list = 0;
+        switchblock->num_adjacencies = my_calloc(sizeof(int), FPGA->W);
+        switchblock->occupancy_list = my_calloc(sizeof(int), FPGA->W);
+        
+        int wire_cnt;
+        for(wire_cnt = 0; wire_cnt < FPGA->W; wire_cnt++) {
+            switchblock->num_adjacencies[wire_cnt] = 0;
+            switchblock->occupancy_list[wire_cnt] = 0;
+        }
     }
 
     return switchblock;
@@ -188,7 +196,7 @@ void generate_wires(t_switchblock* lower_sb, t_switchblock* upper_sb) {
 
             //The wire number in the channel
             wire->wire_num = 2*wire_pair + pair_cnt;
-            printf("  Generating wire %d\n", wire->wire_num);
+            /*printf("  Generating wire %d\n", wire->wire_num);*/
 
             //Set adjacencies for this wire
             //  array_of_adjacent_switches
@@ -197,7 +205,7 @@ void generate_wires(t_switchblock* lower_sb, t_switchblock* upper_sb) {
 
 
             //Connect to switch blocks
-            wire->routing_label = -1;
+            wire->label = NONE;
         }
 
     }
@@ -232,7 +240,7 @@ void set_adjacent_switchblocks_and_pins(t_wire* wire, t_switchblock* lower_sb, t
         }
 
         //Adjacent pins
-        wire->num_adjacent_pins = 2*CLB_NUM_PINS_PER_SIDE;
+        wire->num_adjacent_pins = 2*CLB_NUM_PINS_PER_SIDE; //Defaults to four pins, corrects to 2 pins for edge cases later
         wire->array_of_adjacent_pins = my_calloc(sizeof(t_pin*), wire->num_adjacent_pins);
 
         int wire_adjacent_pin_index = 0;
@@ -243,14 +251,15 @@ void set_adjacent_switchblocks_and_pins(t_wire* wire, t_switchblock* lower_sb, t
 
         if (channel_num != 0) {
             //This is not the left or bottom edge of the FPGA
+            // Therefore, there exists a block to the left or bottom of this channel
             
             t_SIDE block_side;
+            //Opposite, since the side is in refernce to the
+            // block and not the channel
             if(is_vertical_channel) {
-                //Opposite, since the side is in refernce to the
-                // block and not the channel
-                block_side = LEFT;
+                block_side = RIGHT;
             } else {
-                block_side = BOTTOM;
+                block_side = TOP;
             }
 
             //Get block relative to this routing channel
@@ -269,6 +278,7 @@ void set_adjacent_switchblocks_and_pins(t_wire* wire, t_switchblock* lower_sb, t
 
                 //Add wire to pin adjacency list
                 assert(wire->wire_num < FPGA->W);
+                adjacent_pin->num_adjacent_wires++;
                 adjacent_pin->array_of_adjacent_wires[wire->wire_num] = wire;
             }
 
@@ -281,11 +291,12 @@ void set_adjacent_switchblocks_and_pins(t_wire* wire, t_switchblock* lower_sb, t
 
         if (channel_num != FPGA->grid_size) {
             //This is not the top or right edge of the FPGA
+            // Therefore, there exists a block to the right or top of this channel
             
             t_SIDE block_side;
+            //Opposite to side of block, since the side is in refernce to the
+            // block and not the channel
             if(is_vertical_channel) {
-                //Opposite, since the side is in refernce to the
-                // block and not the channel
                 block_side = LEFT;
             } else {
                 block_side = BOTTOM;
@@ -307,6 +318,7 @@ void set_adjacent_switchblocks_and_pins(t_wire* wire, t_switchblock* lower_sb, t
 
                 //Add wire to pin adjacency list
                 assert(wire->wire_num < FPGA->W);
+                adjacent_pin->num_adjacent_wires++;
                 adjacent_pin->array_of_adjacent_wires[wire->wire_num] = wire;
             }
 
@@ -372,4 +384,59 @@ void add_wire_to_switchblock_adjacency(t_wire* wire, t_switchblock* sb) {
     assert(num_adjacencies <= FPGA->Fs + 1);
     sb->num_adjacencies[wire->wire_num] = num_adjacencies;
     sb->adjacency_list[wire->wire_num][num_adjacencies-1] = wire;
+}
+
+void verify_rr_graph(void) {
+    int block_index;
+    for(block_index = 0; block_index < (FPGA->grid_size*FPGA->grid_size); block_index++) {
+        t_block* block = FPGA->blocklist->array_of_blocks[block_index];
+        int pin_index;
+        for(pin_index = 0; pin_index < CLB_SIDES_PER_BLOCK*CLB_NUM_PINS_PER_SIDE; pin_index++) {
+            t_pin* pin = block->array_of_pins[pin_index];
+
+            assert(pin->pin_num == pin_index);
+            assert(pin->num_adjacent_wires == FPGA->W);
+
+            int adjacent_wire_index;
+            for(adjacent_wire_index = 0; adjacent_wire_index < pin->num_adjacent_wires; adjacent_wire_index++) {
+
+                t_wire* wire = pin->array_of_adjacent_wires[adjacent_wire_index];
+                assert(wire != NULL);
+
+                //Two pins per side of a block -> either two or 4 pins per wire
+                assert(wire->num_adjacent_pins % CLB_NUM_PINS_PER_SIDE == 0);
+                assert(wire->num_adjacent_pins > 0 && wire->num_adjacent_pins <= 2*CLB_NUM_PINS_PER_SIDE);
+
+                //Two switchblocks per wire
+                assert(wire->num_switchblocks == 2);
+
+            }
+
+        }
+    }
+
+    int sb_index;
+    for(sb_index = 0; sb_index < FPGA->switchblocklist->num_switchblocks; sb_index++) {
+        t_switchblock* sb = FPGA->switchblocklist->array_of_switchblocks[sb_index];
+
+        int wire_index;
+        for(wire_index = 0; wire_index < FPGA->W; wire_index++) {
+
+            assert(sb->num_adjacencies[wire_index] == 2 || sb->num_adjacencies[wire_index] == 3 || sb->num_adjacencies[wire_index] == 4);
+
+            int adjacent_index;
+            for(adjacent_index = 0; adjacent_index < sb->num_adjacencies[wire_index]; adjacent_index++) {
+                
+                t_wire* wire = sb->adjacency_list[wire_index][adjacent_index];
+
+                //Two pins per side of a block -> either two or 4 pins per wire
+                assert(wire->num_adjacent_pins % CLB_NUM_PINS_PER_SIDE == 0);
+                assert(wire->num_adjacent_pins > 0 && wire->num_adjacent_pins <= 2*CLB_NUM_PINS_PER_SIDE);
+
+                //Two switchblocks per wire
+                assert(wire->num_switchblocks == 2);
+            }
+        }
+    }
+
 }

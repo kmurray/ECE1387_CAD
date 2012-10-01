@@ -122,7 +122,6 @@ void dump_switchblock(t_switchblock* sb) {
 }
 
 void dump_wire(t_wire* wire) {
-    char* intdent = "    ";
     if (wire == NULL) {
         printf("    Wire: NULL\n");
     } else {
@@ -143,7 +142,6 @@ t_boolean is_vertical_wire(t_wire* wire) {
 }
 
 t_boolean is_positive_wire(t_wire* wire, t_switchblock* sb) {
-    t_switchblock* sb_0 = wire->array_of_adjacent_switchblocks[0];
     t_switchblock* sb_1 = wire->array_of_adjacent_switchblocks[1];
 
     if (is_vertical_wire(wire)) {
