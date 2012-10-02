@@ -24,5 +24,6 @@ void dump_wire(t_wire* wire);
 
 t_boolean is_vertical_wire(t_wire* wire);
 t_boolean is_positive_wire(t_wire* wire, t_switchblock* sb);
+char* short_wire_name(t_wire* wire);
 //void swap(void* a, void *b);
 #endif

@@ -41,7 +41,7 @@ void insert_expansion_list(t_expansion_list* expansion_list, t_wire* wire, int c
     bubble_up(expansion_list, expansion_list->heap_size);
 }
 
-t_wire* get_min_expansion_list(t_expansion_list* expansion_list) {
+t_heap_node get_min_expansion_list(t_expansion_list* expansion_list) {
     //Put the final node in the last position
     swap_nodes(&expansion_list->heap[MIN_HEAP_INDEX], &expansion_list->heap[expansion_list->heap_size]);
 
@@ -52,7 +52,7 @@ t_wire* get_min_expansion_list(t_expansion_list* expansion_list) {
     bubble_down(expansion_list, MIN_HEAP_INDEX);
 
     //Return the previous minimum value
-    return expansion_list->heap[expansion_list->heap_size+1].wire;
+    return expansion_list->heap[expansion_list->heap_size+1];
 }
 
 t_boolean verify_heap(t_expansion_list* expansion_list){
@@ -72,20 +72,23 @@ t_boolean verify_heap(t_expansion_list* expansion_list){
         //Left child
         if (left_child_index <= heap_size
             && heap[node_index].key > heap[left_child_index].key) {
+            //node_index key should be smaller
             heap_ok = FALSE;
+            assert(heap_ok);
         }
 
         //Right child
         if (right_child_index <= heap_size
             && heap[node_index].key > heap[right_child_index].key) {
+            //node_index key should be smaller
             heap_ok = FALSE;
+            assert(heap_ok);
         }
     }
     
     if(heap_ok == FALSE) {
         printf("Error: invalid heap state\n");
     }
-
     return heap_ok;
 }
 
@@ -138,8 +141,8 @@ void bubble_down(t_expansion_list* expansion_list, int node_index){
             }
         }
 
-        if (expansion_list->heap[node_index].key < expansion_list->heap[child_to_swap_index].key) {
-            //Node index smaller than children so swap
+        if (expansion_list->heap[node_index].key > expansion_list->heap[child_to_swap_index].key) {
+            //Node index larger than children so swap
             swap_nodes(&expansion_list->heap[node_index], &expansion_list->heap[child_to_swap_index]);
 
             //Continue propogating down the tree

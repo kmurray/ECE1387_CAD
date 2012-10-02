@@ -11,7 +11,7 @@
 
 t_expansion_list* alloc_expansion_list(void);
 t_boolean is_empty_expansion_list(t_expansion_list* expansion_list);
-t_wire* get_min_expansion_list(t_expansion_list* expansion_list);
+t_heap_node get_min_expansion_list(t_expansion_list* expansion_list);
 void insert_expansion_list(t_expansion_list* expansion_list, t_wire* wire, int cost);
 t_boolean verify_heap(t_expansion_list* expansion_list);
 #endif

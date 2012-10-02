@@ -205,7 +205,7 @@ void generate_wires(t_switchblock* lower_sb, t_switchblock* upper_sb) {
 
 
             //Connect to switch blocks
-            wire->label = NONE;
+            wire->label_type = NONE;
         }
 
     }

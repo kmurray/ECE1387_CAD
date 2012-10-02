@@ -160,10 +160,11 @@ t_boolean is_positive_wire(t_wire* wire, t_switchblock* sb) {
     }
 }
 
-/*
- *void swap(void* a, void *b) {
- *    void* tmp = a;
- *    *a = b;
- *    *b = tmp;
- *}
- */
+char* short_wire_name(t_wire* wire) {
+    char buf[40];
+    snprintf(buf, sizeof(buf), "(%d,%d)<-->(%d,%d) #%d", 
+             wire->array_of_adjacent_switchblocks[0]->x_coord, wire->array_of_adjacent_switchblocks[0]->y_coord,
+             wire->array_of_adjacent_switchblocks[1]->x_coord, wire->array_of_adjacent_switchblocks[1]->y_coord,
+             wire->wire_num);
+    return buf;
+}

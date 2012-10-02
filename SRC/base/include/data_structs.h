@@ -22,6 +22,7 @@ typedef struct s_switchblock t_switchblock;
 typedef struct s_rr_graph t_rr_graph;
 typedef struct s_expansion_list t_expansion_list;
 typedef struct s_heap_node t_heap_node;
+typedef struct s_traceback t_traceback;
 typedef struct s_FPGA t_FPGA;
 
 typedef enum e_boolean {FALSE = 0, TRUE} t_boolean;
@@ -79,6 +80,8 @@ struct s_pin {
 struct s_net {
     t_pin* source_pin;
     t_pin* sink_pin;
+
+    int net_num;
     
 };
 
@@ -110,7 +113,7 @@ struct s_switchblocklist {
 /*
  * Labels used during maze routing
  */
-typedef enum e_ROUTING_LABEL {NONE = -1, TARGET, USED, CURRENT_EXPANSION} t_ROUTING_LABEL;
+typedef enum e_ROUTING_LABEL {NONE = -1, TARGET, SOURCE, USED, CURRENT_EXPANSION} t_ROUTING_LABEL;
 
 
 /*
@@ -135,7 +138,8 @@ struct s_wire {
     int channel_pair_num; //Which pair of wires in the channel does this wire belong to
     int wire_num; //Wire number in the channel
 
-    t_ROUTING_LABEL label; //The label applied by the maze routing algorithm
+    t_ROUTING_LABEL label_type; //The label applied by the maze routing algorithm
+    int label_value;
 };
 
 
@@ -148,6 +152,11 @@ struct s_heap_node {
     int key;
 
     t_wire* wire;
+};
+
+struct s_traceback {
+    int num_segs;
+    t_wire** array_of_segs;
 };
 
 

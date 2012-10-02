@@ -26,6 +26,8 @@ int main (int argc, char** argv) {
     parse_netlist(args.netlist_file); 
     FPGA->Fs = FPGA_FS;
 
+    init_graphics("kroute graphics");
+
     //Generate the Routing Resource Graph
     generate_rr_graph();
     verify_rr_graph();

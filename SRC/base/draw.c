@@ -18,12 +18,12 @@ int clb_len;
 void draw_clb(t_block* block);
 void draw_switchblock(t_switchblock* sb);
 void draw_routing_from_sb(t_switchblock* sb);
+int midpoint(int start, int end);
 
 
 void start_interactive_graphics(void) {
-    init_graphics("kroute graphics");
 
-    printf("FPGA gridsize: %d\n", FPGA->grid_size);
+    /*printf("FPGA gridsize: %d\n", FPGA->grid_size);*/
 
     //Calculate the world size
     number_of_wire_pairs = FPGA->W / 2;
@@ -31,11 +31,12 @@ void start_interactive_graphics(void) {
     clb_len = 1.4*channel_spacing;
     world_dim = FPGA->grid_size*clb_len + (FPGA->grid_size + 1)*channel_spacing + clb_len;
 
-    printf("World Dim: %.2f\n", world_dim);
+    /*printf("World Dim: %.2f\n", world_dim);*/
 
     init_world(0., world_dim, world_dim, 0.);
     update_message("Testing graphics.....");
 
+    draw_screen();
     event_loop(button_press, draw_screen);
 }
 
@@ -75,10 +76,9 @@ static void draw_screen(void) {
         //First do the vertical channels
     int x_coord, y_coord;
     for(x_coord = 0; x_coord < FPGA->grid_size + 1; x_coord++) {
-        printf("Drawing Vertical Routing  Channel %d\n", x_coord);
         for(y_coord = 0; y_coord < FPGA->grid_size + 1; y_coord++) {
+            /*printf("Drawing Routing from SB (%d,%d)\n", x_coord, y_coord);*/
             t_switchblock* sb = get_sb(x_coord, y_coord);
-
             draw_routing_from_sb(sb);
 
 
@@ -228,13 +228,40 @@ void draw_routing_from_sb(t_switchblock* sb) {
             /*setcolor(GREEN);*/
             /*drawrect(left_channel_x, bottom_channel_y, right_channel_x, top_channel_y);*/
             /*setcolor(RED);*/
+            if(wire->label_type == CURRENT_EXPANSION) {
+                char buf[10];
+                snprintf(buf, sizeof(buf), "%d", wire->label_value);
+                drawtext(midpoint(line_x_start, line_x_end), midpoint(line_y_start, line_y_end), buf, TEXT_LIMIT);
+                setcolor(RED);
+            } else if (wire->label_type == SOURCE) {
+                drawtext(midpoint(line_x_start, line_x_end), midpoint(line_y_start, line_y_end), "0", TEXT_LIMIT);
+                setcolor(RED);
+            } else if (wire->label_type == TARGET) {
+                drawtext(midpoint(line_x_start, line_x_end), midpoint(line_y_start, line_y_end), "T", TEXT_LIMIT);
+                setcolor(GREEN);
+            } else {
+                setcolor(BLACK);
+            }
             drawline(line_x_start, line_y_start, line_x_end, line_y_end);
+            setcolor(BLACK);
         }
 
         
 
-    setcolor(BLACK);
     }
+    /*flushinput();*/
+}
+
+int midpoint(int start, int end) {
+    int midpoint;
+    if (start > end) {
+        midpoint = end + (start - end) / 2; 
+    } else {
+        midpoint = start + (end - start) / 2; 
+    }
+    
+    //Slight offset
+    return midpoint + 1;
 }
 
 static void button_press (float x, float y) {

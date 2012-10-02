@@ -88,6 +88,7 @@ void parse_netlist(const char* filename) {
         }
 
         int net_index = netlist->num_nets - 1;
+        new_net->net_num = net_index;
         netlist->array_of_nets[net_index] = new_net;
     }
 
