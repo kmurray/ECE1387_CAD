@@ -71,6 +71,9 @@ void parse_netlist(const char* filename) {
         new_net->source_pin = source_pin;
         new_net->sink_pin = sink_pin;
         
+        //Tag the pins with the nets
+        source_pin->associated_net = new_net;
+        sink_pin->associated_net = new_net;
         
         //Allocate space for the net entry
         if (netlist->num_nets == 0) {

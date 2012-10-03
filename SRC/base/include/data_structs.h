@@ -7,7 +7,7 @@
 //There are two pins per side of the CLB
 #define CLB_SIDES_PER_BLOCK 4
 #define CLB_NUM_PINS_PER_SIDE 2
-
+#define NUM_SB_PER_WIRE 2
 /*
  * Prototypes for typdef structures
  */
@@ -30,7 +30,7 @@ typedef enum e_boolean {FALSE = 0, TRUE} t_boolean;
 /*
  * An FPGA complex block
  */
-typedef enum e_SIDE {RIGHT = 0, BOTTOM, LEFT, TOP} t_SIDE;
+typedef enum e_SIDE {RIGHT = 0, TOP, LEFT, BOTTOM} t_SIDE;
 
 struct s_block {
     int x_coord;
@@ -69,6 +69,8 @@ struct s_pin {
 
     t_wire** array_of_adjacent_wires; //The wires accessible from this pin [0..W-1], since Fc=1
     int num_adjacent_wires; //Usually equal W
+
+    t_net* associated_net;
 
 };
 

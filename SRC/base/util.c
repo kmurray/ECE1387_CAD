@@ -160,6 +160,25 @@ t_boolean is_positive_wire(t_wire* wire, t_switchblock* sb) {
     }
 }
 
+t_boolean is_positive_wire_from_block(t_wire* wire, t_switchblock* sb) {
+    t_switchblock* sb_1 = wire->array_of_adjacent_switchblocks[1];
+
+    if (is_vertical_wire(wire)) {
+        if(sb->y_coord < sb_1->y_coord) {
+            return TRUE;
+        } else {
+            return FALSE;
+        }
+
+    } else {
+        if(sb->x_coord < sb_1->x_coord) {
+            return TRUE;
+        } else {
+            return FALSE;
+        }
+    }
+}
+
 char* short_wire_name(t_wire* wire) {
     char buf[40];
     snprintf(buf, sizeof(buf), "(%d,%d)<-->(%d,%d) #%d", 
