@@ -14,6 +14,7 @@ void get_adjacent_block_coordinates(int top_right, t_switchblock* lower_sb, t_sw
                                     int* block_x_coord, int* block_y_coord);
 t_block* get_adjacent_block(int top_right, t_switchblock* lower_sb, t_switchblock* upper_sb);
 void add_wire_to_switchblock_adjacency(t_wire* wire, t_switchblock* sb);
+void reset_rr_graph(void);
 
 void generate_rr_graph(void) {
     printf("Generating Routing Resource Graph\n");
@@ -188,9 +189,6 @@ void generate_wires(t_switchblock* lower_sb, t_switchblock* upper_sb) {
                 wire->channel_y_coord = lower_sb->y_coord;
             }
             
-            //Initial associated_net is unused
-            wire->associated_net = NULL;
-            
             //The pair number
             wire->channel_pair_num = wire_pair;
 
@@ -203,6 +201,9 @@ void generate_wires(t_switchblock* lower_sb, t_switchblock* upper_sb) {
             //  array_of_adjacent_pins
             set_adjacent_switchblocks_and_pins(wire, lower_sb, upper_sb);
 
+            wire->occupancy = 0;
+            wire->present_cost = 0;
+            wire->history_cost = 0;
 
             //Connect to switch blocks
             wire->label_type = NONE;
@@ -440,3 +441,45 @@ void verify_rr_graph(void) {
     }
 
 }
+
+void reset_rr_graph(void) {
+    int block_index;
+    for(block_index = 0; block_index < (FPGA->grid_size*FPGA->grid_size); block_index++) {
+        t_block* block = FPGA->blocklist->array_of_blocks[block_index];
+        int pin_index;
+        for(pin_index = 0; pin_index < CLB_SIDES_PER_BLOCK*CLB_NUM_PINS_PER_SIDE; pin_index++) {
+            t_pin* pin = block->array_of_pins[pin_index];
+
+            int adjacent_wire_index;
+            for(adjacent_wire_index = 0; adjacent_wire_index < pin->num_adjacent_wires; adjacent_wire_index++) {
+
+                t_wire* wire = pin->array_of_adjacent_wires[adjacent_wire_index];
+
+                wire->label_type = NONE;
+                wire->label_value = -1;
+            }
+
+        }
+    }
+
+    int sb_index;
+    for(sb_index = 0; sb_index < FPGA->switchblocklist->num_switchblocks; sb_index++) {
+        t_switchblock* sb = FPGA->switchblocklist->array_of_switchblocks[sb_index];
+
+        int wire_index;
+        for(wire_index = 0; wire_index < FPGA->W; wire_index++) {
+
+            int adjacent_index;
+            for(adjacent_index = 0; adjacent_index < sb->num_adjacencies[wire_index]; adjacent_index++) {
+                
+                t_wire* wire = sb->adjacency_list[wire_index][adjacent_index];
+
+                wire->label_type = NONE;
+                wire->label_value = -1;
+            }
+        }
+    }
+
+}
+
+

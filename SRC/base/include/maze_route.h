@@ -12,7 +12,11 @@ struct s_adjacent_segs {
 };
 
 
-t_boolean try_route_net(t_net* net_to_route);
+t_boolean try_route_net(t_net* net_to_route, int do_graphics);
 void route_netlist(void);
+void route_netlist_simple_reordering(void);
+t_adjacent_segs* find_all_adjacent_segs(t_wire* wire);
+void free_adjacent_segs(t_adjacent_segs* adjacent_segs);
+void rip_up_all_nets(void);
 
 #endif

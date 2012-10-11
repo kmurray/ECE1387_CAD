@@ -3,8 +3,10 @@
 
 #include <graphics.h>
 
-static void button_press (float x, float y);
-static void draw_screen(void);
+#define DETAILED_INTERACTIVE_GRAPHICS 0
+#define FINISHED_NET_GRAPHICS 0
+void button_press (float x, float y);
+void draw_screen(void);
 void start_interactive_graphics(void);
 
 #define PAIRED_WIRE_SPACING 4
@@ -23,7 +25,7 @@ void start_interactive_graphics(void);
 #define TARGET_WIRE_WIDTH SOURCE_WIRE_WIDTH
 
 #define USED_WIRE_COLOUR BLACK
-#define CURRENT_EXPANSION_WIRE_COLOUR RED
+#define CURRENT_EXPANSION_WIRE_COLOUR CYAN
 #define SOURCE_WIRE_COLOUR GREEN
 #define TARGET_WIRE_COLOUR YELLOW
 

@@ -23,6 +23,7 @@ t_drawing_position find_pin_to_wire(int pin_x, int pin_y, t_pin* pin, t_wire* wi
 t_wire* find_wire_by_pin_net(t_pin* pin);
 t_drawing_position get_wire_drawing_coords(t_switchblock* sb, t_wire* wire);
 
+extern int interactive_graphics;
 
 void start_interactive_graphics(void) {
 
@@ -40,10 +41,12 @@ void start_interactive_graphics(void) {
     update_message("Testing graphics.....");
 
     draw_screen();
-    event_loop(button_press, draw_screen);
+    /*if(interactive_graphics) {*/
+        event_loop(button_press, draw_screen);
+    /*}*/
 }
 
-static void draw_screen(void) {
+void draw_screen(void) {
     clearscreen();
 
     //World limits
@@ -170,15 +173,43 @@ void draw_clb(t_block* block) {
             //The pin connection
             if (pin->associated_net != NULL) {
                 /*printf("Pin (%d,%d) #%d with associated net net_%d\n", pin->block->x_coord, pin->block->y_coord, pin->pin_num, pin->associated_net->net_num);*/
-                t_wire* wire = find_wire_by_pin_net(pin);
-                if (wire != NULL) {
-                    t_drawing_position pos = find_pin_to_wire(pin_x, pin_y, pin, wire, side);
-                    /*printf("Drawing line: (%d,%d) to (%d,%d)\n", pos.start_x, pos.start_y, pos.end_x, pos.end_y);*/
-                    setlinewidth(USED_WIRE_WIDTH);
-                    drawline(pos.start_x, pos.start_y, pos.end_x, pos.end_y);
-                    setlinewidth(DEFAULT_LINE_WIDTH);
-                    fillrect(pos.end_x - PIN_TO_WIRE_BOX_WIDTH/2, pos.end_y - PIN_TO_WIRE_BOX_WIDTH/2,
-                             pos.end_x + PIN_TO_WIRE_BOX_WIDTH/2, pos.end_y + PIN_TO_WIRE_BOX_WIDTH/2);
+                /*
+                 *t_wire* wire = find_wire_by_pin_net(pin);
+                 *if (wire != NULL) {
+                 *    t_drawing_position pos = find_pin_to_wire(pin_x, pin_y, pin, wire, side);
+                 *    [>printf("Drawing line: (%d,%d) to (%d,%d)\n", pos.start_x, pos.start_y, pos.end_x, pos.end_y);<]
+                 *    setlinewidth(USED_WIRE_WIDTH);
+                 *    drawline(pos.start_x, pos.start_y, pos.end_x, pos.end_y);
+                 *    setlinewidth(DEFAULT_LINE_WIDTH);
+                 *    fillrect(pos.end_x - PIN_TO_WIRE_BOX_WIDTH/2, pos.end_y - PIN_TO_WIRE_BOX_WIDTH/2,
+                 *             pos.end_x + PIN_TO_WIRE_BOX_WIDTH/2, pos.end_y + PIN_TO_WIRE_BOX_WIDTH/2);
+                 *}
+                 */
+                t_net* associated_net = pin->associated_net;
+                if(associated_net->num_associated_wires > 0) {
+                    //The wire has been routed
+
+
+                    int pin_wire_index;
+                    if(associated_net->source_pin == pin) {
+                        //The last element in the array
+                        assert(associated_net->num_associated_wires - 1 >= 0);
+                        pin_wire_index = associated_net->num_associated_wires - 1;
+                    } else {
+                        assert(associated_net->sink_pin == pin);
+                        pin_wire_index = 0;
+                    }
+
+                    t_wire* wire = associated_net->associated_wires[pin_wire_index];
+
+                    if (wire != NULL) {
+                        t_drawing_position pos = find_pin_to_wire(pin_x, pin_y, pin, wire, side);
+                        setlinewidth(USED_WIRE_WIDTH);
+                        drawline(pos.start_x, pos.start_y, pos.end_x, pos.end_y);
+                        setlinewidth(DEFAULT_LINE_WIDTH);
+                        fillrect(pos.end_x - PIN_TO_WIRE_BOX_WIDTH/2, pos.end_y - PIN_TO_WIRE_BOX_WIDTH/2,
+                                 pos.end_x + PIN_TO_WIRE_BOX_WIDTH/2, pos.end_y + PIN_TO_WIRE_BOX_WIDTH/2);
+                    }
                 }
             }
                      
@@ -194,6 +225,27 @@ void draw_switchblock(t_switchblock* sb) {
     int rect_y = clb_len/2 + (sb->y_coord)*(clb_len + channel_spacing) + WIRE_EXTENSION_BEYOND_CLB;
 
     drawrect (rect_x, rect_y, rect_x + sb_len, rect_y + sb_len);
+/*
+ *    t_boolean sb_used = FALSE;
+ *
+ *    char* buf[30];;
+ *
+ *    int track_cnt;
+ *    for(track_cnt = 0; track_cnt < FPGA->W; track_cnt++) {
+ *        if (sb->occupancy_list[track_cnt] != NULL) {
+ *            sb_used = TRUE;
+ *            snprintf(buf, sizeof(buf), "%s,%d", buf, sb->occupancy_list[track_cnt]->net_num);
+ *        }
+ *    }
+ *    if(sb_used) {
+ *        setcolor(LIGHTGREY);
+ *        fillrect (rect_x, rect_y, rect_x + sb_len, rect_y + sb_len);
+ *        setcolor(BLACK);
+ *        drawtext(rect_x + sb_len/2, rect_y + sb_len/2, buf, TEXT_LIMIT);
+ *    } else {
+ *        drawrect (rect_x, rect_y, rect_x + sb_len, rect_y + sb_len);
+ *    }
+ */
 
     /*//Draw co-ordinates
      *char buf[50];
@@ -222,40 +274,41 @@ void draw_routing_from_sb(t_switchblock* sb) {
 
             //The coordinates used to draw each line
             t_drawing_position pos = get_wire_drawing_coords(sb, wire);
+            
+            char buf[10] = "";
+            
+            if(wire->occupancy > 0) {
+                setlinewidth(USED_WIRE_WIDTH);
+            }
 
             //Set colours and optional text based on wire label
             if(wire->label_type == CURRENT_EXPANSION) {
-                char buf[10];
-                snprintf(buf, sizeof(buf), "%d", wire->label_value);
-                drawtext(midpoint(pos.start_x, pos.end_x), midpoint(pos.start_y, pos.end_y), buf, TEXT_LIMIT);
-                setlinewidth(CURRENT_EXPANSION_WIRE_WIDTH);
+                snprintf(buf, sizeof(buf), "%.1f", wire->label_value);
                 setcolor(CURRENT_EXPANSION_WIRE_COLOUR);
             } else if (wire->label_type == SOURCE) {
-                drawtext(midpoint(pos.start_x, pos.end_x), midpoint(pos.start_y, pos.end_y), "S0", TEXT_LIMIT);
-                setlinewidth(SOURCE_WIRE_WIDTH);
+                snprintf(buf, sizeof(buf), "S%.1f", wire->label_value);
                 setcolor(SOURCE_WIRE_COLOUR);
             } else if (wire->label_type == TARGET) {
-                char buf[10];
                 if(wire->label_value == -1) {
                     snprintf(buf, sizeof(buf), "T");
                 } else {
-                    snprintf(buf, sizeof(buf), "T%d", wire->label_value);
+                    snprintf(buf, sizeof(buf), "T%.1f", wire->label_value);
                 }
-                drawtext(midpoint(pos.start_x, pos.end_x), midpoint(pos.start_y, pos.end_y), buf, TEXT_LIMIT);
-                setlinewidth(TARGET_WIRE_WIDTH);
                 setcolor(TARGET_WIRE_COLOUR);
-            } else if (wire->label_type == USED) {
-                setlinewidth(USED_WIRE_WIDTH);
-                setcolor(USED_WIRE_COLOUR);
             } else {
-                setlinewidth(DEFAULT_LINE_WIDTH);
-                setcolor(DEFAULT_LINE_COLOUR);
+                if(wire->occupancy > 1) {
+                    setcolor(RED);
+                } else {
+                    setcolor(DEFAULT_LINE_COLOUR);
+                }
             }
+
 
             //Actually draw it
             drawline(pos.start_x, pos.start_y, pos.end_x, pos.end_y);
             setcolor(DEFAULT_LINE_COLOUR);
             setlinewidth(DEFAULT_LINE_WIDTH);
+            drawtext(midpoint(pos.start_x, pos.end_x), midpoint(pos.start_y, pos.end_y), buf, TEXT_LIMIT);
             
             
             //Draw wire index indicators beside  the lowest and leftest switchblock
@@ -347,7 +400,7 @@ int midpoint(int start, int end) {
     return midpoint + 1;
 }
 
-static void button_press (float x, float y) {
+void button_press (float x, float y) {
     /* Called whenever event_loop gets a button press in the graphics *
      * area.  Allows the user to do whatever he/she wants with button *
      * clicks.                                                        */
@@ -356,11 +409,7 @@ static void button_press (float x, float y) {
 }
 
 t_drawing_position find_pin_to_wire(int pin_x, int pin_y, t_pin* pin, t_wire* wire, t_SIDE side) {
-    int chan_len = clb_len + 2*WIRE_EXTENSION_BEYOND_CLB;
-   
     t_drawing_position pos;
-
-
 
     if(side == RIGHT) {
         pos.start_x = pin_x;
@@ -390,13 +439,3 @@ t_drawing_position find_pin_to_wire(int pin_x, int pin_y, t_pin* pin, t_wire* wi
         return pos;
 }
 
-t_wire* find_wire_by_pin_net(t_pin* pin) {
-    int wire_index;
-    for(wire_index = 0; wire_index < pin->num_adjacent_wires; wire_index++) {
-        t_wire* wire = pin->array_of_adjacent_wires[wire_index];
-        if(wire->associated_net == pin->associated_net) {
-            return wire;
-        }
-    }
-    return NULL;
-}

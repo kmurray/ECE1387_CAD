@@ -15,6 +15,7 @@ const char* argp_program_bug_address = "k.murray@eecg.utoronto.ca";
 
 struct arguments {
     int verbose;
+    int interactive_graphics;
     char* netlist_file;     // The input netlist file
 };
 
@@ -24,6 +25,7 @@ static struct argp_option options[] = {
      */
     {"verbose", 'v', 0, 0, "Print more detailed information"},
     {"circuit", 'c', "NETLIST_FILE", 0, "The input circuit netlist file"},
+    {"interactive_graphics", 'i', 0, 0, "Run the graphics in interactive mode"},
     {0}
 };
 
@@ -38,6 +40,7 @@ int check_args(struct arguments* args) {
 void set_default_args(struct arguments* args) {
     args->verbose = 0;
     args->netlist_file = NULL;
+    args->interactive_graphics = 0;
 }
 
 //Non optioned argument documentation
@@ -60,6 +63,9 @@ static error_t parse_opt(int key, char* arg, struct argp_state* state) {
             arguments->verbose = 1;
         case 'c':
             arguments->netlist_file = arg;
+            break;
+        case 'i':
+            arguments->interactive_graphics = 1;
             break;
         case ARGP_KEY_END:
             //Check for required arguments

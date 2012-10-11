@@ -32,13 +32,13 @@ void parse_netlist(const char* filename) {
     fscanf(fp, "%d", &grid_size);
     FPGA->grid_size = grid_size;
 
-    //Creates array_of_blocks
-    t_blocklist* blocklist = allocate_blocklist(FPGA);
-    FPGA->blocklist = blocklist;
-
     //Second line is the channel width
     fscanf(fp, "%d", &channel_width);
     FPGA->W = channel_width;
+
+    //Creates array_of_blocks
+    t_blocklist* blocklist = allocate_blocklist(FPGA);
+    FPGA->blocklist = blocklist;
    
     //Allocate space for the netlist structure
     t_netlist* netlist = my_malloc(sizeof(t_netlist));
@@ -70,6 +70,9 @@ void parse_netlist(const char* filename) {
         t_net* new_net = my_malloc(sizeof(t_net));
         new_net->source_pin = source_pin;
         new_net->sink_pin = sink_pin;
+        new_net->associated_wires = my_calloc(sizeof(t_wire*), NET_MAX_WIRES);
+        new_net->num_associated_wires = 0;
+
         
         //Tag the pins with the nets
         source_pin->associated_net = new_net;

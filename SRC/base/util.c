@@ -27,6 +27,7 @@ void* my_calloc(size_t num_items, size_t size_of_item) {
     void* retval = calloc(num_items, size_of_item);
     if (retval == NULL) {
         printf("Error: calloc of size %ux%u bytes failed\n", (unsigned int) num_items, (unsigned int) size_of_item);
+        assert(0);
         exit(1);
         
     }

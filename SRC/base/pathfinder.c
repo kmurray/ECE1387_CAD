@@ -20,7 +20,7 @@ int pathfinder_route(void) {
 
     while(routing_iteration == 0 || overused_resource_count > 0) {
         //Track the iteration number
-        start_interactive_graphics();
+        /*start_interactive_graphics();*/
         routing_iteration++;
 
         printf("--------------- ROUTING ITERATION %d START ---------------\n", routing_iteration);
@@ -157,7 +157,7 @@ void update_costs(int routing_iteration) {
 
                 //Optimize for adjacnet wire pairs having one wire unoccupied
                 if(wire->wire_num % 2 == 1) {
-                    wire->present_cost += 0.5;
+                    wire->present_cost += RESERVOIR_WIRE_INCR_COST_PCT * wire->present_cost;
                 }
                 
                 assert(wire->history_cost >= 0);

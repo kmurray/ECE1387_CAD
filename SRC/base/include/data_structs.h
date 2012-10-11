@@ -79,12 +79,15 @@ struct s_pin {
  *
  * NOTE: Assuming no multi-fanout nets
  */
+#define NET_MAX_WIRES 60
 struct s_net {
     t_pin* source_pin;
     t_pin* sink_pin;
 
     int net_num;
     
+    t_wire** associated_wires; //Array of pins from [0..num_associated_wires]  Ordered from sink (index 0) to source (index num_associated_wires-1)
+    int num_associated_wires; //A value greater than zero means the wire has been routed
 };
 
 /*
@@ -129,8 +132,6 @@ struct s_wire {
     int channel_x_coord;
     int channel_y_coord;
 
-    t_net* associated_net;  //The net this wire is part of
-
     t_switchblock** array_of_adjacent_switchblocks; //[0..num_switchblocks-1] Array of the switchblocks this wire connects to
     int num_switchblocks;  //The number of switch blocks
 
@@ -140,8 +141,14 @@ struct s_wire {
     int channel_pair_num; //Which pair of wires in the channel does this wire belong to
     int wire_num; //Wire number in the channel
 
+    float occupancy;
+    float present_cost;
+    float history_cost;
+
     t_ROUTING_LABEL label_type; //The label applied by the maze routing algorithm
-    int label_value;
+    float label_value;
+
+    int counted; //Flag to indicate whether this wire has been counted
 };
 
 

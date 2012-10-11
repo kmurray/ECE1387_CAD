@@ -18,7 +18,7 @@ OBJS = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o,$(wildcard $(SRC_DIR)/*c))
 
 DEBUG_FLAGS = -g
 WARN_FLAGS = -Wall
-OPT_FLAGS = 
+OPT_FLAGS = -O3
 INC_FLAGS = -I$(INC_DIR) -I$(LIB_DIR)/easygl -I$(X11_INCLUDE)
 
 CFLAGS = $(DEBUG_FLAGS) $(WARN_FLAGS) $(OPT_FLAGS) $(INC_FLAGS)
