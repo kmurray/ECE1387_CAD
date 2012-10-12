@@ -7,7 +7,7 @@
 #define P_FAC_INITIAL 1
 #define P_FAC_MULT 2
 
-#define R_FAC_INITIAL 1.00
+#define R_FAC_INITIAL 2.00
 #define R_FAC_MULT 0.1
 
 #define BASE_RESOURCE_COST 1

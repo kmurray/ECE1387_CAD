@@ -146,8 +146,8 @@ t_boolean try_route_net(t_net* net_to_route, int do_graphics) {
     t_boolean found_route = FALSE;
     t_boolean found_traceback = FALSE;
 
-    /*printf("\nRouting net %d\n", net_to_route->net_num);*/
     float prev_cost = 0.;
+
     //Labels source, target
     //Initializes expansion list
     t_expansion_list* expansion_list = init_expansion_list(net_to_route);
@@ -166,13 +166,6 @@ t_boolean try_route_net(t_net* net_to_route, int do_graphics) {
         DEBUG_PRINT("\tExpansion on wire %s\n", short_wire_name(current_seg));
        
         double next_cost = 0.;
-#if DETAILED_INTERACTIVE_GRAPHICS
-        /*
-         *if(prev_cost < next_cost) {
-         *    start_interactive_graphics();
-         *}
-         */
-#endif
 
         int sb_index;
         for(sb_index = 0; sb_index < adjacent_segs->num_sb; sb_index++) {
@@ -180,12 +173,9 @@ t_boolean try_route_net(t_net* net_to_route, int do_graphics) {
             for(adjacent_seg_index = 0; adjacent_seg_index < adjacent_segs->num_segs[sb_index]; adjacent_seg_index++) {
                 t_wire* adjacent_seg = adjacent_segs->array_of_segs[sb_index][adjacent_seg_index];
                 
-            /*printf("\t\tChecking wire %s\t", short_wire_name(adjacent_seg));*/
 
                 //The cost at this adjacent_seg
                 next_cost = current_seg_node.key + incr_wire_cost(adjacent_seg);
-                    //BASE_RESOURCE_COST*adjacent_seg->history_cost*adjacent_seg->present_cost;
-                //*(1 + adjacent_seg->occupancy);
                 assert(next_cost >= 0);
 
                 //Found the target
@@ -203,17 +193,16 @@ t_boolean try_route_net(t_net* net_to_route, int do_graphics) {
                     } else {
                         DEBUG_PRINT("\t\tChecking wire %s \t Found worse routing path\n", short_wire_name(adjacent_seg));
                     }
+                    //Search for the best routing (i.e. the whole RR graph)
+                    // Since we are using variable costs, the best route may not be
+                    // the shortest (first found)
+                    //
+                    // This will increase CPU Time
                     continue;
                     /*break;*/
                 }
 
                 //Segment already used/labeled
-                /*
-                 *if(adjacent_seg->label_type == USED) {
-                 *    DEBUG_PRINT("\t\tChecking wire %s \t Wire already in use\n", short_wire_name(adjacent_seg));
-                 *    continue;
-                 *}
-                 */
                 if(adjacent_seg->label_type == CURRENT_EXPANSION) {
                     DEBUG_PRINT("\t\tChecking wire %s \t Wire already in expansion\n", short_wire_name(adjacent_seg));
                     continue;
@@ -243,12 +232,6 @@ t_boolean try_route_net(t_net* net_to_route, int do_graphics) {
 
     if (found_route == TRUE) {
         found_traceback = commit_traceback(net_to_route, do_graphics);
-    } else {
-        /*
-         *printf("Found no expansion route\n");
-         *start_interactive_graphics();
-         *assert(0);
-         */
     }
 
     //Remove expansion labels etc

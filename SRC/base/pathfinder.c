@@ -17,6 +17,7 @@ void copy_net(t_net* tmp_net, t_net* routed_net);
 double calc_Pfac(int routing_iteration);
 void update_cost_for_wire(t_wire* wire, int routing_iteration);
 void update_costs_for_net(t_net* net, int routing_iteration);
+double calc_Rfac(int routing_iteration);
 
 extern int opt_reservoirs;
 extern int interactive_graphics;
@@ -29,12 +30,15 @@ int pathfinder_route(void) {
 
     while(routing_iteration == 0 || overused_resource_count > 0) {
         //Track the iteration number
-        /*start_interactive_graphics();*/
         routing_iteration++;
 
         printf("--------------- ROUTING ITERATION %d START ---------------\n", routing_iteration);
 
         //Initial costs
+        double Hfac = H_FAC; //Constant
+        double Pfac = calc_Pfac(routing_iteration);
+        Rfac = calc_Rfac(routing_iteration);
+        printf("Updating cost for wire: Hfac: %.2f Pfac: %.2f Rfac: %.2f\n", Hfac, Pfac, Rfac);
         update_costs(routing_iteration);
 
         printf("Routing nets");
@@ -47,13 +51,13 @@ int pathfinder_route(void) {
             t_net* net_to_route = netlist->array_of_nets[net_index];
             
             //Save a copy of the previous routing
+            // used to allow cheap costing
             copy_net(netlist->tmp_net, net_to_route);
              
             //Remove any previous routing
             rip_up_net(net_to_route);
 
             //Re-route the net
-            /*printf("Routing net #%d...", net_to_route->net_num);*/
             printf(".");
             fflush(stdout);
             if (try_route_net(net_to_route, 0)) {
@@ -64,11 +68,12 @@ int pathfinder_route(void) {
             }
 
 
-            //Update the costs of each node
-            /*update_costs(routing_iteration);*/
             //Update costs of the wires that have changed
-            update_costs_for_net(netlist->tmp_net, routing_iteration);
-            update_costs_for_net(net_to_route, routing_iteration);
+            /*
+             *update_costs_for_net(netlist->tmp_net, routing_iteration);
+             *update_costs_for_net(net_to_route, routing_iteration);
+             */
+            update_costs(routing_iteration);
 
         }
         printf("\n");
@@ -244,7 +249,7 @@ void update_costs(int routing_iteration) {
     double Hfac = H_FAC; //Constant
     double Pfac = calc_Pfac(routing_iteration);
     Rfac = calc_Rfac(routing_iteration);
-    printf("Updating cost for wire: Hfac: %.2f Pfac: %.2f Rfac: %.2f\n", Hfac, Pfac, Rfac);
+    /*printf("Updating cost for wire: Hfac: %.2f Pfac: %.2f Rfac: %.2f\n", Hfac, Pfac, Rfac);*/
 
     t_switchblocklist* sb_list = FPGA->switchblocklist;
 
