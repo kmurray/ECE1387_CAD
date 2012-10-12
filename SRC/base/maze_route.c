@@ -23,6 +23,9 @@ void clean_wire(t_wire* wire);
 void clean_net_wire_list(t_net* net);
 /*void clean_sb(t_switchblock* sb, t_net* net);*/
 
+t_adjacent_segs* g_adjacent_segs;
+
+
 void route_netlist(void) {
     t_netlist* netlist = FPGA->netlist;
 
@@ -311,12 +314,21 @@ t_adjacent_segs* find_all_adjacent_segs(t_wire* wire) {
 }
 
 t_adjacent_segs* _find_adjacent_segs(t_wire* wire, t_boolean include_all ){
+    //Silently re-use the same global adjacent_segs struct
+    // to avoid malloc overhead
+    if(g_adjacent_segs == NULL) { 
+        int max_adjacent_wires = FPGA->W*4;
 
-    //An adjacent segs structure is used to return values (see the associated .h file)
-    t_adjacent_segs* adjacent_segs = my_malloc(sizeof(t_adjacent_segs));
-    adjacent_segs->num_sb = wire->num_switchblocks;
-    adjacent_segs->num_segs = my_calloc(sizeof(int), adjacent_segs->num_sb);
-    adjacent_segs->array_of_segs = my_calloc(sizeof(t_wire*), wire->num_switchblocks);
+        //An adjacent segs structure is used to return values (see the associated .h file)
+        g_adjacent_segs = my_malloc(sizeof(t_adjacent_segs));
+        //Two switchblocks per wire
+        g_adjacent_segs->num_sb = 2;
+        g_adjacent_segs->num_segs = my_calloc(sizeof(int), g_adjacent_segs->num_sb);
+        g_adjacent_segs->array_of_segs = my_calloc(sizeof(t_wire*), 2);
+        //Allocate appropriate space to store all the references
+        g_adjacent_segs->array_of_segs[0] = my_calloc(sizeof(t_wire*), max_adjacent_wires);
+        g_adjacent_segs->array_of_segs[1] = my_calloc(sizeof(t_wire*), max_adjacent_wires);
+    }
 
     int sb_index;
     //Each switchblock connected to this wire
@@ -327,16 +339,14 @@ t_adjacent_segs* _find_adjacent_segs(t_wire* wire, t_boolean include_all ){
         //Num adjacencies of this wire.
         // -1 since we don't count this wire being included in the switchblock
         // adjacency list
-        adjacent_segs->num_segs[sb_index] = (sb->num_adjacencies[wire->wire_num] - 1);
+        g_adjacent_segs->num_segs[sb_index] = (sb->num_adjacencies[wire->wire_num] - 1);
 
-        //Allocate appropriate space to store all the references
-        adjacent_segs->array_of_segs[sb_index] = my_calloc(sizeof(t_wire*), adjacent_segs->num_segs[sb_index]);
 
         t_wire** adjacency_list = sb->adjacency_list[wire->wire_num];
         assert(adjacency_list != NULL);
 
         int adjacent_wire_index;
-        int adjacent_segs_index = 0;
+        int g_adjacent_segs_index = 0;
         for(adjacent_wire_index = 0; adjacent_wire_index < sb->num_adjacencies[wire->wire_num]; adjacent_wire_index++) {
             t_wire* adjacent_wire = adjacency_list[adjacent_wire_index];
 
@@ -366,31 +376,35 @@ t_adjacent_segs* _find_adjacent_segs(t_wire* wire, t_boolean include_all ){
                 continue;
             } 
 
-            assert(adjacent_segs_index < adjacent_segs->num_segs[sb_index]);
+            assert(g_adjacent_segs_index < g_adjacent_segs->num_segs[sb_index]);
 
-            adjacent_segs->array_of_segs[sb_index][adjacent_segs_index] = adjacent_wire;
+            g_adjacent_segs->array_of_segs[sb_index][g_adjacent_segs_index] = adjacent_wire;
 
-            assert(adjacent_segs->array_of_segs[sb_index][adjacent_segs_index] != NULL);
+            assert(g_adjacent_segs->array_of_segs[sb_index][g_adjacent_segs_index] != NULL);
 
-            adjacent_segs_index++;
+            g_adjacent_segs_index++;
         }
-        assert(adjacent_segs_index <= adjacent_segs->num_segs[sb_index]);
-        adjacent_segs->num_segs[sb_index] = adjacent_segs_index;
+        assert(g_adjacent_segs_index <= g_adjacent_segs->num_segs[sb_index]);
+        g_adjacent_segs->num_segs[sb_index] = g_adjacent_segs_index;
     }
 
     //Sanity check
     int adjacent_index;
-    for(sb_index = 0; sb_index < adjacent_segs->num_sb; sb_index++) {
-        assert(adjacent_segs->num_segs[sb_index] >= 0);
-        for(adjacent_index = 0; adjacent_index < adjacent_segs->num_segs[sb_index]; adjacent_index++) {
-            assert(adjacent_segs->array_of_segs[sb_index][adjacent_index] != NULL);
+    for(sb_index = 0; sb_index < g_adjacent_segs->num_sb; sb_index++) {
+        assert(g_adjacent_segs->num_segs[sb_index] >= 0);
+        for(adjacent_index = 0; adjacent_index < g_adjacent_segs->num_segs[sb_index]; adjacent_index++) {
+            assert(g_adjacent_segs->array_of_segs[sb_index][adjacent_index] != NULL);
         }
     }
 
-    return adjacent_segs;
+    return g_adjacent_segs;
 }
 
 void free_adjacent_segs(t_adjacent_segs* adjacent_segs) {
+
+    //Temporarily disable
+    return;
+
     int sb_index;
 
     for(sb_index = 0; sb_index < adjacent_segs->num_sb; sb_index++) {

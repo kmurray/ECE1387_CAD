@@ -1,6 +1,7 @@
 #ifndef MAZE_ROUTE_H
 #define MAZE_ROUTE_H
 
+
 extern t_FPGA* FPGA;
 
 typedef struct s_adjacent_segs t_adjacent_segs;

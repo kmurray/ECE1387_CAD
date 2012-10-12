@@ -97,6 +97,7 @@ struct s_netlist {
     t_net** array_of_nets; //[0..num_nets-1]
     size_t num_nets;
 
+    t_net* tmp_net;
 };
 
 /*
@@ -139,6 +140,7 @@ struct s_wire {
     int num_adjacent_pins;
 
     int channel_pair_num; //Which pair of wires in the channel does this wire belong to
+    t_wire* reservoir_wire;
     int wire_num; //Wire number in the channel
 
     double occupancy;

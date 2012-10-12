@@ -10,7 +10,7 @@
 extern t_FPGA* FPGA;
 
 int print_wire_seg_stats(void);
-t_wire* get_reservoir_wire(t_wire* wire);
+inline t_wire* get_reservoir_wire(t_wire* wire);
 float evaluate_phi(int total_num_segs);
 
 
@@ -147,7 +147,7 @@ void evaluate_qor(void) {
 
     float phi = evaluate_phi(total_num_segs);
     printf("  Reservoir Optimization:\n");
-    printf("\tPHI: %.1f segs\t(%.1f of total # segs)\n", phi, (phi/total_num_segs));
+    printf("\tPHI: %.1f segs\t(%.2f of total # segs)\n", phi, (phi/total_num_segs));
 }
 
 //Returns the total number of segments used
@@ -209,47 +209,57 @@ float evaluate_phi(int total_num_segs) {
     return phi;
 }
 
-t_wire* get_reservoir_wire(t_wire* wire) {
-    t_switchblock* sb = wire->array_of_adjacent_switchblocks[0];
-
-    /*printf("Wire to match: %s\n", short_wire_name(wire));*/
-    //Look for a net with the same switchblocks, and the same channel_pair_num
-    int track_index;
-    for(track_index = 0; track_index <= FPGA->W; track_index++) {
-        int wire_index;
-        for(wire_index = 0; wire_index < sb->num_adjacencies[track_index]; wire_index++) {
-            t_wire* new_wire = sb->adjacency_list[track_index][wire_index];
-            /*printf("\tChecking Wire: %s\n", short_wire_name(new_wire));*/
-
-            assert(new_wire->num_switchblocks == 2);
-            assert(wire->num_switchblocks == 2);
-
-            if(new_wire == wire) {
-                /*printf("\t\tSkipping since same wire\n");*/
-                continue;
-            }
-
-            if(new_wire->channel_pair_num != wire->channel_pair_num ) {
-                /*printf("\t\tSkipping since not the same wire pair\n");*/
-                continue;
-            }
-    
-            if(new_wire->array_of_adjacent_switchblocks[0] != wire->array_of_adjacent_switchblocks[0]) {
-                /*printf("\t\tSkipping swithcblock[0] doesn't match\n");*/
-                continue;
-            }
-
-            if(new_wire->array_of_adjacent_switchblocks[1] != wire->array_of_adjacent_switchblocks[1]){
-                /*printf("\t\tSkipping swithcblock[1] doesn't match\n");*/
-                continue;
-            }
-
-            /*printf("\t\tFound Match!\n");*/
-            return new_wire;
-        }
-    }
-    /*printf("\t\tFound NO Match\n");*/
-    assert(FPGA->W % 2 == 0);
-    assert(0);
-    return NULL; 
+inline t_wire* get_reservoir_wire(t_wire* wire) {
+    return wire->reservoir_wire;
 }
+/*
+ *t_wire* get_reservoir_wire(t_wire* wire) {
+ *    t_switchblock* sb = wire->array_of_adjacent_switchblocks[0];
+ *
+ *    [>printf("Wire to match: %s\n", short_wire_name(wire));<]
+ *    //Look for a net with the same switchblocks, and the same channel_pair_num
+ *    int track_index;
+ *
+ *    if (wire->wire_num % 2 == 0) {
+ *        track_index = wire->wire_num + 1;
+ *    } else {
+ *        track_index = wire->wire_num - 1;
+ *    }
+ *    
+ *    int wire_index;
+ *    for(wire_index = 0; wire_index < sb->num_adjacencies[track_index]; wire_index++) {
+ *        t_wire* new_wire = sb->adjacency_list[track_index][wire_index];
+ *        [>printf("\tChecking Wire: %s\n", short_wire_name(new_wire));<]
+ *
+ *        assert(new_wire->num_switchblocks == 2);
+ *        assert(wire->num_switchblocks == 2);
+ *
+ *        if(new_wire == wire) {
+ *            [>printf("\t\tSkipping since same wire\n");<]
+ *            continue;
+ *        }
+ *
+ *        if(new_wire->channel_pair_num != wire->channel_pair_num ) {
+ *            [>printf("\t\tSkipping since not the same wire pair\n");<]
+ *            continue;
+ *        }
+ *
+ *        if(new_wire->array_of_adjacent_switchblocks[0] != wire->array_of_adjacent_switchblocks[0]) {
+ *            [>printf("\t\tSkipping swithcblock[0] doesn't match\n");<]
+ *            continue;
+ *        }
+ *
+ *        if(new_wire->array_of_adjacent_switchblocks[1] != wire->array_of_adjacent_switchblocks[1]){
+ *            [>printf("\t\tSkipping swithcblock[1] doesn't match\n");<]
+ *            continue;
+ *        }
+ *
+ *        [>printf("\t\tFound Match!\n");<]
+ *        return new_wire;
+ *    }
+ *    [>printf("\t\tFound NO Match\n");<]
+ *    assert(FPGA->W % 2 == 0);
+ *    assert(0);
+ *    return NULL; 
+ *}
+ */

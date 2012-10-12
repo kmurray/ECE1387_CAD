@@ -34,7 +34,7 @@ void generate_rr_graph(void) {
             int lower_y_coord = y_coord;
             int upper_x_coord = x_coord;
             int upper_y_coord = y_coord+1;
-            printf("Generating wires for switchblock pair: (%d,%d)<-->(%d,%d)\n", lower_x_coord, lower_y_coord, upper_x_coord, upper_y_coord);
+            /*printf("Generating wires for switchblock pair: (%d,%d)<-->(%d,%d)\n", lower_x_coord, lower_y_coord, upper_x_coord, upper_y_coord);*/
             t_switchblock* bottom_sb = get_sb(lower_x_coord, lower_y_coord);
             t_switchblock* top_sb = get_sb(upper_x_coord, upper_y_coord);
 
@@ -52,7 +52,7 @@ void generate_rr_graph(void) {
             int lower_y_coord = y_coord;
             int upper_x_coord = x_coord+1;
             int upper_y_coord = y_coord;
-            printf("Generating wires for switchblock pair: (%d,%d)<-->(%d,%d)\n", lower_x_coord, lower_y_coord, upper_x_coord, upper_y_coord);
+            /*printf("Generating wires for switchblock pair: (%d,%d)<-->(%d,%d)\n", lower_x_coord, lower_y_coord, upper_x_coord, upper_y_coord);*/
             t_switchblock* bottom_sb = get_sb(lower_x_coord, lower_y_coord);
             t_switchblock* top_sb = get_sb(upper_x_coord, upper_y_coord);
 
@@ -167,6 +167,9 @@ void generate_wires(t_switchblock* lower_sb, t_switchblock* upper_sb) {
     int wire_pair;
     for(wire_pair = 0; wire_pair < (FPGA->W / 2); wire_pair++) {
 
+        t_wire* even_wire;
+        t_wire* odd_wire;
+
         int pair_cnt;
         //Two wires per pair
         for(pair_cnt = 0; pair_cnt < 2; pair_cnt++) {
@@ -207,7 +210,17 @@ void generate_wires(t_switchblock* lower_sb, t_switchblock* upper_sb) {
 
             //Connect to switch blocks
             wire->label_type = NONE;
+
+            if(pair_cnt == 0) {
+                even_wire = wire;
+            } else {
+                odd_wire = wire;
+            }
         }
+
+        //Set reservoir pointer
+        even_wire->reservoir_wire = odd_wire;
+        odd_wire->reservoir_wire = even_wire;
 
     }
 }

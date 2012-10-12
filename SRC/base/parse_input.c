@@ -42,6 +42,11 @@ void parse_netlist(const char* filename) {
    
     //Allocate space for the netlist structure
     t_netlist* netlist = my_malloc(sizeof(t_netlist));
+    netlist->tmp_net = my_malloc(sizeof(t_net));
+    netlist->tmp_net->source_pin = NULL;
+    netlist->tmp_net->sink_pin = NULL;
+    netlist->tmp_net->associated_wires = my_calloc(sizeof(t_wire*), NET_MAX_WIRES);
+    netlist->tmp_net->num_associated_wires = 0;
 
     //Initialize the number of nets
     netlist->num_nets = 0;
