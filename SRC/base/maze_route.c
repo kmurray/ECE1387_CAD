@@ -8,6 +8,7 @@
 #include <draw.h>
 #include <expansion_list.h>
 #include <maze_route.h>
+#include <pathfinder.h>
 
 t_expansion_list* init_expansion_list(t_net* net_to_route);
 t_adjacent_segs* find_adjacent_segs(t_wire* wire);
@@ -27,7 +28,7 @@ void route_netlist(void) {
 
     int unrouted_nets = netlist->num_nets;
 
-    int do_graphics;
+    int do_graphics = 0;
     /*start_interactive_graphics();*/
 
     clock_t cstart = clock();
@@ -36,11 +37,6 @@ void route_netlist(void) {
         t_net* net_to_route = netlist->array_of_nets[net_index];
         printf("Routing net #%d\n", net_index);
 
-        if (net_to_route->net_num == 2) {
-            do_graphics = 0;
-        } else {
-            do_graphics = 0;
-        }
         if (try_route_net(net_to_route, do_graphics)) {
             printf("  SUCCESSFULLY routed net #%d\n", net_index);
             unrouted_nets--;
@@ -165,7 +161,7 @@ t_boolean try_route_net(t_net* net_to_route, int do_graphics) {
         t_adjacent_segs* adjacent_segs = find_adjacent_segs(current_seg);
         DEBUG_PRINT("\tExpansion on wire %s\n", short_wire_name(current_seg));
        
-        float next_cost = 0.;
+        double next_cost = 0.;
 #if DETAILED_INTERACTIVE_GRAPHICS
         /*
          *if(prev_cost < next_cost) {
@@ -183,7 +179,9 @@ t_boolean try_route_net(t_net* net_to_route, int do_graphics) {
             /*printf("\t\tChecking wire %s\t", short_wire_name(adjacent_seg));*/
 
                 //The cost at this adjacent_seg
-                next_cost = current_seg_node.key + adjacent_seg->present_cost*(1+adjacent_seg->occupancy) + adjacent_seg->history_cost;
+                next_cost = current_seg_node.key + incr_wire_cost(adjacent_seg);
+                    //BASE_RESOURCE_COST*adjacent_seg->history_cost*adjacent_seg->present_cost;
+                //*(1 + adjacent_seg->occupancy);
                 assert(next_cost >= 0);
 
                 //Found the target
@@ -277,7 +275,7 @@ t_expansion_list* init_expansion_list(t_net* net){
         t_wire* source_wire = source_pin->array_of_adjacent_wires[source_wire_index];
 
         source_wire->label_type = SOURCE;
-        source_wire->label_value = source_wire->present_cost*(source_wire->occupancy+1) + source_wire->history_cost;
+        source_wire->label_value = incr_wire_cost(source_wire); //source_wire->present_cost*(source_wire->occupancy+1) + source_wire->history_cost;
         //Source wires inserted with cost 0
         insert_expansion_list(expansion_list, source_wire, source_wire->label_value);
     }
@@ -610,6 +608,10 @@ void clean_net_wire_list(t_net* net) {
 void clean_wire(t_wire* wire) {
     wire->label_type = NONE;
     wire->label_value = -1;
+}
+
+void rip_up_net(t_net* net) {
+    clean_net(net);
 }
 
 void rip_up_all_nets(void) {

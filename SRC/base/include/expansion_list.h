@@ -4,7 +4,7 @@
 #include <data_structs.h>
 
 
-#define MAX_HEAP_ITEMS  4096
+#define MAX_HEAP_ITEMS  16384
 #define MIN_HEAP_INDEX  1
 #define MAX_HEAP_INDEX  MAX_HEAP_ITEMS
 

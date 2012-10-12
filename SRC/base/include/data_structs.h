@@ -79,7 +79,7 @@ struct s_pin {
  *
  * NOTE: Assuming no multi-fanout nets
  */
-#define NET_MAX_WIRES 60
+#define NET_MAX_WIRES 120
 struct s_net {
     t_pin* source_pin;
     t_pin* sink_pin;
@@ -141,12 +141,12 @@ struct s_wire {
     int channel_pair_num; //Which pair of wires in the channel does this wire belong to
     int wire_num; //Wire number in the channel
 
-    float occupancy;
-    float present_cost;
-    float history_cost;
+    double occupancy;
+    double present_cost;
+    double history_cost;
 
     t_ROUTING_LABEL label_type; //The label applied by the maze routing algorithm
-    float label_value;
+    double label_value;
 
     int counted; //Flag to indicate whether this wire has been counted
 };
@@ -158,7 +158,7 @@ struct s_expansion_list {
 };
 
 struct s_heap_node {
-    int key;
+    double key;
 
     t_wire* wire;
 };

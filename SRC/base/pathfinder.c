@@ -2,8 +2,8 @@
 #include <stdio.h>
 #include <assert.h>
 #include <time.h>
-#include <pathfinder.h>
 #include <data_structs.h>
+#include <pathfinder.h>
 #include <maze_route.h>
 #include <draw.h>
 
@@ -25,19 +25,33 @@ int pathfinder_route(void) {
 
         printf("--------------- ROUTING ITERATION %d START ---------------\n", routing_iteration);
 
-
-        //Update the costs of each node
+        //Initial costs
         update_costs(routing_iteration);
 
-        //Remove all previous routing
-        rip_up_all_nets();
-        
+
         //Start timer
         clock_t cstart = clock();
 
-        //Route the netlist with all new costs
-        route_netlist();
+        int net_index;
+        for(net_index = 0; net_index < netlist->num_nets; net_index++) {
+            t_net* net_to_route = netlist->array_of_nets[net_index];
         
+            //Remove any previous routing
+            rip_up_net(net_to_route);
+
+            //Re-route the net
+            printf("Routing net #%d...", net_to_route->net_num);
+            if (try_route_net(net_to_route, 0)) {
+                printf("Successful\n");
+            } else {
+                printf("\n\tError: could not route net\n");
+                assert(0);
+            }
+
+            //Update the costs of each node
+            update_costs(routing_iteration);
+        }
+
         //End timer
         clock_t cend = clock();
 
@@ -47,6 +61,9 @@ int pathfinder_route(void) {
 
         printf("---------------  ROUTING ITERATION %d END  ---------------\n", routing_iteration);
         printf("\t%d resources overused\n", overused_resource_count);
+#if DETAILED_INTERACTIVE_GRAPHICS   
+        start_interactive_graphics();
+#endif
 
         float nets_per_sec = ((float) netlist->num_nets*routing_iteration) / (((double)cend - (double)cstart)* 1.0e-6);
         printf("\tProcessed %.2f nets per second\n", nets_per_sec);
@@ -116,9 +133,23 @@ void reset_count_flag(void) {
     }
 }
 
+double incr_wire_cost(t_wire* wire) {
+    double incr_cost = BASE_RESOURCE_COST*wire->history_cost*wire->present_cost;
+    return incr_cost;
+}
+
 void update_costs(int routing_iteration) {
     t_switchblocklist* sb_list = FPGA->switchblocklist;
 
+    double Hfac = H_FAC; //Constant
+    double Pfac;
+    if(routing_iteration == 1) {
+        Pfac = P_FAC_INITIAL;    
+    } else {
+        Pfac = P_FAC_INITIAL * ((routing_iteration - 1)*P_FAC_MULT); 
+    }
+
+    /*printf("Updating costs Hfac: %.2f, Pfac: %.2f\n", Hfac, Pfac);*/
     //Every net
     int sb_index;
     for(sb_index = 0; sb_index < sb_list->num_switchblocks; sb_index++) {
@@ -144,21 +175,26 @@ void update_costs(int routing_iteration) {
                     wire->history_cost = 1;
                 } else {
                     //All subsequent routing iterations
+                        
+                    /*
+                     *  Pathfinder cost functions as defined in
+                     *    'Architecture and CAD for Deep-Submicron FPGAs'
+                     *         by V. Betz, J. Rose, A. Marquardt
+                     */
+                    
+                    //Present cost is multiplied
+                    wire->present_cost = 1 + (wire->occupancy + 1)*Pfac;
 
-                    if(wire->occupancy > 1) {
-                        //History cost increments by previous present_cost
-                        wire->history_cost += (wire->present_cost*wire->occupancy);
+                    //History cost increments by previous present_cost
+                    wire->history_cost = wire->history_cost + wire->occupancy*Hfac;
 
-                        //Present cost is multiplied
-                        wire->present_cost = PRES_FAC_MULT*wire->present_cost;
-                    }
 
                 }
 
                 //Optimize for adjacnet wire pairs having one wire unoccupied
-                if(wire->wire_num % 2 == 1) {
-                    wire->present_cost += RESERVOIR_WIRE_INCR_COST_PCT * wire->present_cost;
-                }
+                /*if(wire->wire_num % 2 == 1) {*/
+                    /*wire->present_cost += RESERVOIR_WIRE_INCR_COST_PCT * wire->present_cost;*/
+                /*}*/
                 
                 assert(wire->history_cost >= 0);
                 assert(wire->present_cost >= 0);
@@ -167,3 +203,4 @@ void update_costs(int routing_iteration) {
     }
     
 }
+
