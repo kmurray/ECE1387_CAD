@@ -18,6 +18,9 @@ double calc_Pfac(int routing_iteration);
 void update_cost_for_wire(t_wire* wire, int routing_iteration);
 void update_costs_for_net(t_net* net, int routing_iteration);
 
+extern int opt_reservoirs;
+extern int interactive_graphics;
+
 int pathfinder_route(void) {
     int routing_iteration = 0;
     int overused_resource_count;
@@ -80,7 +83,9 @@ int pathfinder_route(void) {
         printf("---------------  ROUTING ITERATION %d END  ---------------\n", routing_iteration);
         printf("\t%d resources overused\n", overused_resource_count);
 #if DETAILED_INTERACTIVE_GRAPHICS   
-        start_interactive_graphics();
+        if(interactive_graphics) {
+            start_interactive_graphics();
+        }
 #endif
 
         float nets_per_sec = ((float) netlist->num_nets) / (((double)cend - (double)cstart)* 1.0e-6);
@@ -155,12 +160,19 @@ inline double incr_wire_cost(t_wire* wire) {
     /*double incr_cost = BASE_RESOURCE_COST*wire->history_cost*wire->present_cost*wire->reservoir_cost;*/
 
     double local_Rfac = 1.0;
-    t_wire* reservoir_wire = get_reservoir_wire(wire);
-    if(reservoir_wire->occupancy > 0) {
-        local_Rfac = Rfac;
-    } else {
-        //The adjacent wire is not occupied
-        local_Rfac = 1.0;
+    /*
+     *t_wire* reservoir_wire = get_reservoir_wire(wire);
+     *if(reservoir_wire->occupancy > 0) {
+     *    local_Rfac = Rfac;
+     *} else {
+     *    //The adjacent wire is not occupied
+     *    local_Rfac = 1.0;
+     *}
+     */
+    if(opt_reservoirs) {
+        if(wire->wire_num % 2 == 1) {
+            local_Rfac = Rfac;
+        }
     }
     double incr_cost = BASE_RESOURCE_COST*wire->history_cost*wire->present_cost*local_Rfac;
     return incr_cost;

@@ -25,6 +25,7 @@ void clean_net_wire_list(t_net* net);
 
 t_adjacent_segs* g_adjacent_segs;
 
+extern int interactive_graphics;
 
 void route_netlist(void) {
     t_netlist* netlist = FPGA->netlist;
@@ -419,11 +420,10 @@ void free_adjacent_segs(t_adjacent_segs* adjacent_segs) {
 }
 
 t_boolean commit_traceback(t_net* net_to_route, int do_graphics) {
-    if (do_graphics) {
+#if DETAILED_INTERACTIVE_GRAPHICS
+    if(interactive_graphics) {
         start_interactive_graphics();
     }
-#if DETAILED_INTERACTIVE_GRAPHICS
-    start_interactive_graphics();
 #endif
     t_boolean found_traceback = TRUE;
     DEBUG_PRINT("\tTraceback for net %d\n", net_to_route->net_num);
@@ -540,11 +540,10 @@ void commit_route_seg(t_net* net_to_route, t_wire* prev_wire, t_wire* wire_to_co
     net_to_route->num_associated_wires++;
     net_to_route->associated_wires[net_to_route->num_associated_wires - 1] = wire_to_commit;
 
-    if (do_graphics) {
+#if DETAILED_INTERACTIVE_GRAPHICS
+    if(interactive_graphics) {
         start_interactive_graphics();
     }
-#if DETAILED_INTERACTIVE_GRAPHICS
-    start_interactive_graphics();
 #endif
 }
 

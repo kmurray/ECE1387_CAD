@@ -11,6 +11,7 @@
 
 t_FPGA* FPGA;
 int interactive_graphics;
+int opt_reservoirs;
 int verbose;
 
 int main (int argc, char** argv) {
@@ -26,9 +27,16 @@ int main (int argc, char** argv) {
     }
 
     if (args.interactive_graphics) {
+        printf("Interactive Graphics Enabled\n");
         interactive_graphics = 1;
     } else {
         interactive_graphics = 0;
+    }
+    if (args.opt_reservoirs) {
+        printf("Optimizing Reservoirs\n");
+        opt_reservoirs = 1;
+    } else {
+        opt_reservoirs = 0;
     }
     if (args.verbose) {
         verbose = 1;

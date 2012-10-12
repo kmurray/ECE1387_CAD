@@ -3,7 +3,7 @@
 
 #include <graphics.h>
 
-#define DETAILED_INTERACTIVE_GRAPHICS 0
+#define DETAILED_INTERACTIVE_GRAPHICS 1
 #define FINISHED_NET_GRAPHICS 0
 void button_press (float x, float y);
 void draw_screen(void);
