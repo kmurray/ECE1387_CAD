@@ -8,9 +8,12 @@ typedef struct s_pnetlist t_pnetlist;
 typedef struct s_block t_block;
 typedef struct s_net t_net;
 typedef struct s_pnet t_pnet;
+typedef struct s_ccm t_ccm;
+typedef struct s_movable_blocks t_moveable_blocks;
 
 typedef enum e_boolean {FALSE = 0, TRUE} t_boolean;
 typedef enum e_block_type {PSEUDO = 1, REAL} t_block_type;
+typedef enum e_axies {X_AXIS, Y_AXIS} t_axis;
 
 struct s_CHIP {
     int x_dim;
@@ -19,8 +22,6 @@ struct s_CHIP {
     t_blocklist* blocklist;
 
     t_netlist* netlist;
-
-    t_pnetlist* pnetlist;
 
 };
 
@@ -66,8 +67,12 @@ struct s_block {
  */
 struct s_net {
     int index;
+
     int num_blocks;
     t_block** associated_blocks; //[0..num_blocks-1]
+
+    int num_pnets;
+    t_pnet** equivalent_pnets;
 };
 
 
@@ -79,7 +84,24 @@ struct s_pnet {
     t_block* block_a;
     t_block* block_b;
     
-    float weight;
+    double weight;
+};
+/*
+ * A Compressed Column Matrix
+ *   i.e. a matrix stored in compressed column format
+ */
+struct s_ccm {
+    int* col_ptrs; //[0..num_cols]
+    int* row_indexs; //[0..num_values-1]
+    double* values; //[0..num_values-1]
+    int num_values;
+    int num_rows; //The number of rows in the full matrix
+    int num_cols; //The number of cols in the full matrix
+};
+
+struct s_movable_blocks {
+    int num_blocks;
+    t_block** array_of_blocks; //[0..num_blocks-1]
 };
 
 extern t_CHIP* g_CHIP;

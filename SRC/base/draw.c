@@ -53,25 +53,25 @@ void draw_screen(void) {
     }
 
     //Draw nets
-    /*
-     *if(g_args->draw_nets) {
-     *    t_netlist* netlist = g_CHIP->netlist;
-     *    int net_index;
-     *    for(net_index = 1; net_index <= netlist->num_nets; net_index++) {
-     *        t_net* net = netlist->array_of_nets[net_index];
-     *        draw_net(net);
-     *    }
-     *}
-     */
-
-    setcolor(LIGHTGREY);
-    t_pnetlist* pnetlist = g_CHIP->pnetlist;
-    int net_index;
-    for(net_index = 0; net_index < pnetlist->num_pnets; net_index++) {
-        t_net* pnet = pnetlist->array_of_pnets[net_index];
-        draw_pnet(pnet);
+    if(g_args->draw_nets) {
+        t_netlist* netlist = g_CHIP->netlist;
+        int net_index;
+        for(net_index = 1; net_index <= netlist->num_nets; net_index++) {
+            t_net* net = netlist->array_of_nets[net_index];
+            draw_net(net);
+        }
     }
-    setcolor(BLACK);
+
+    /*
+     *setcolor(LIGHTGREY);
+     *t_pnetlist* pnetlist = g_CHIP->pnetlist;
+     *int net_index;
+     *for(net_index = 0; net_index < pnetlist->num_pnets; net_index++) {
+     *    t_net* pnet = pnetlist->array_of_pnets[net_index];
+     *    draw_pnet(pnet);
+     *}
+     *setcolor(BLACK);
+     */
 }
 
 void button_press (float x, float y) {
@@ -79,7 +79,7 @@ void button_press (float x, float y) {
      * area.  Allows the user to do whatever he/she wants with button *
      * clicks.                                                        */
 
-     printf("User clicked at coordinates (%f, %f)\n", x, y);
+     printf("User clicked at coordinates (%.2f, %.2f)\n", x, y);
 }
 
 /*
@@ -104,20 +104,31 @@ void draw_block(t_block* block) {
  * the specified net
  */
 void draw_net(t_net* net) {
-    int from_block_index;
-    for(from_block_index = 0; from_block_index < net->num_blocks; from_block_index++) {
-        t_block* from_block = net->associated_blocks[from_block_index];
-        int to_block_index;
-        for(to_block_index = 0; to_block_index < net->num_blocks; to_block_index++) {
-            t_block* to_block = net->associated_blocks[to_block_index];
 
-            draw_flightline(from_block, to_block);
+    if(net->equivalent_pnets == NULL) {
+        //Haven't generated pnets yet
+        int from_block_index;
+        for(from_block_index = 0; from_block_index < net->num_blocks; from_block_index++) {
+            t_block* from_block = net->associated_blocks[from_block_index];
+            int to_block_index;
+            for(to_block_index = 0; to_block_index < net->num_blocks; to_block_index++) {
+                t_block* to_block = net->associated_blocks[to_block_index];
+
+                draw_flightline(from_block, to_block);
+            }
         }
-    }
-}
+    } else {
+        //Draw the pnets
+        int pnet_index;
+        for(pnet_index = 0; pnet_index < net->num_pnets; pnet_index++) {
+            t_pnet* pnet = net->equivalent_pnets[pnet_index];
 
-void draw_pnet(t_pnet* pnet) {
-    draw_flightline(pnet->block_a, pnet->block_b);
+            setcolor(LIGHTGREY);
+            draw_flightline(pnet->block_a, pnet->block_b);
+            setcolor(BLACK);
+        }
+
+    }
 }
 
 void draw_flightline(t_block* from_block, t_block* to_block) {

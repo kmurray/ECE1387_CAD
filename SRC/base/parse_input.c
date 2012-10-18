@@ -43,25 +43,30 @@ void parse_netlist(const char* filename) {
     //Allocate the block list
     t_blocklist* blocklist = my_malloc(sizeof(t_blocklist));
     blocklist->num_blocks = 0;
-    blocklist->array_of_blocks = my_malloc(sizeof(t_net*));
-    blocklist->array_of_blocks[0] = 0xDEADBEEF; //Sentinel value
+    blocklist->array_of_blocks = NULL;
+    /*blocklist->array_of_blocks = my_malloc(sizeof(t_net*));*/
+    /*blocklist->array_of_blocks[0] = 0xDEADBEEF; //Sentinel value*/
     g_CHIP->blocklist = blocklist; //Add to global chip structure
 
     //Allocate the net list
     t_netlist* netlist = my_malloc(sizeof(t_netlist));
     netlist->num_nets = 0;
-    netlist->array_of_nets = my_malloc(sizeof(t_net*));
-    netlist->array_of_nets[0] = 0xDEADBEEF; //Sentinel value
-    netlist->valid_nets = my_malloc(sizeof(t_boolean));
-    netlist->valid_nets[0] = FALSE;
+    netlist->array_of_nets = NULL;
+    /*netlist->array_of_nets = my_malloc(sizeof(t_net*));*/
+    /*netlist->array_of_nets[0] = 0xDEADBEEF; //Sentinel value*/
+    netlist->valid_nets = NULL;
+    /*netlist->valid_nets = my_malloc(sizeof(t_boolean));*/
+    /*netlist->valid_nets[0] = FALSE;*/
     g_CHIP->netlist = netlist; //Add to global chip structure
 
     //Allocate the pseudo net list
-    t_pnetlist* pnetlist = my_malloc(sizeof(t_pnetlist));
-    pnetlist->num_pnets = 0;
-    pnetlist->max_len = 1;
-    pnetlist->array_of_pnets = my_malloc(sizeof(t_pnet)); //Will be re-allocated as pnets are created
-    g_CHIP->pnetlist = pnetlist; //Add to global chip structure
+    /*
+     *t_pnetlist* pnetlist = my_malloc(sizeof(t_pnetlist));
+     *pnetlist->num_pnets = 0;
+     *pnetlist->max_len = 1;
+     *pnetlist->array_of_pnets = my_malloc(sizeof(t_pnet)); //Will be re-allocated as pnets are created
+     *g_CHIP->pnetlist = pnetlist; //Add to global chip structure
+     */
 
     //Temporay line
     char* line = NULL;
@@ -234,6 +239,7 @@ t_block* parse_fixed_positions(char* line) {
     //Names must match
     assert(strcmp(tmp_blk_name,block->name) == 0);
     free(tmp_blk_name);
+    free(tok);
 
     //Fix location
     block->x = x_coord;
@@ -264,6 +270,8 @@ t_net* find_or_allocate_net(int net_index) {
         net->index = net_index;
         net->num_blocks = 0;
         net->associated_blocks = NULL;
+        net->num_pnets = 0;
+        net->equivalent_pnets = NULL;
 
         //Expand the array_of_nets
         if(netlist->num_nets < net_index) {
@@ -286,6 +294,7 @@ t_net* find_or_allocate_net(int net_index) {
         netlist->array_of_nets[net_index] = net;
         netlist->valid_nets[net_index] = TRUE;
     }
+    assert(net != NULL);
 
     assert(net_index == net->index);
     return net;
@@ -327,7 +336,7 @@ t_block* get_block_by_index(block_index) {
     t_blocklist* blocklist = g_CHIP->blocklist;
 
     //Range check
-    assert(block_index < blocklist->num_blocks);
+    assert(block_index <= blocklist->num_blocks);
 
     return blocklist->array_of_blocks[block_index];
 }
@@ -348,7 +357,6 @@ t_boolean my_readline(FILE* fp, char** line) {
             buf = my_realloc(buf, max_len);
         }
 
-
         buf[cnt] = ch;
         cnt++;
 
@@ -361,6 +369,7 @@ t_boolean my_readline(FILE* fp, char** line) {
     *line = buf;
 
     if(ch == EOF) {
+        free(buf);
         return FALSE;
     }
     return TRUE;

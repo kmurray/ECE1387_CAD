@@ -30,6 +30,7 @@ int main (int argc, char** argv) {
 
     solve_system();
 
+    start_interactive_graphics();
     return 0;
 }
 
