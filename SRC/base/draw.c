@@ -97,6 +97,11 @@ void draw_block(t_block* block) {
     } else {
         drawrect(rect_l, rect_b, rect_r, rect_t);
     }
+
+    char buf[30];
+    snprintf(buf, sizeof(buf), "%d", block->index);
+
+    drawtext(rect_r+BLOCK_LEN, (rect_t + rect_b)/2, buf, 50); 
 }
 
 /*

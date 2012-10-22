@@ -150,8 +150,8 @@ t_block* parse_block_conectivity(char* line) {
     //Initialization
     block->index = -1;
     block->name = NULL;
-    block->x = -1;
-    block->y = -1;
+    block->x = g_CHIP->x_dim/2;
+    block->y = g_CHIP->y_dim/2;
     block->is_fixed = FALSE;
     block->num_nets = 0;
     block->associated_nets = NULL;
