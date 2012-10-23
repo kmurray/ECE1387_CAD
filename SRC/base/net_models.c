@@ -11,6 +11,7 @@
 // INTERNAL FUNCTION DECLARTAIONS 
 //================================================================================================
 void create_pseudo_net(float weight, t_block* block_a, t_block* block_b);
+void add_pnet_to_block(t_pnet* pnet, t_block* block);
 
 //================================================================================================
 // INTERNAL FUCTION IMPLIMENTATIONS
@@ -64,6 +65,9 @@ void clique_model(t_net* logical_net) {
 
             logical_net->equivalent_pnets[num_pseudo_nets_added] = pnet;
 
+            //For fast access during connectivity matrix generation
+            add_pnet_to_block(pnet, block_a);
+            add_pnet_to_block(pnet, block_b);
 
             num_pseudo_nets_added++;
 
@@ -71,4 +75,12 @@ void clique_model(t_net* logical_net) {
     }
 
     assert(num_pseudo_nets_added == logical_net->num_pnets);
+}
+
+
+void add_pnet_to_block(t_pnet* pnet, t_block* block) {
+    block->num_pnets++; 
+    block->equivalent_pnets = my_realloc(block->equivalent_pnets, sizeof(t_pnet*)*block->num_pnets);
+
+    block->equivalent_pnets[block->num_pnets - 1] = pnet;
 }

@@ -20,7 +20,7 @@ int main (int argc, char** argv) {
     printf("DONE\n");
 
     init_graphics("kplace graphics");
-    start_interactive_graphics();
+    //start_interactive_graphics();
 
     printf("Generating net Model...\n");
     generate_pnets(&clique_model);

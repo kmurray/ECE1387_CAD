@@ -21,6 +21,7 @@ void associate_block_and_net(t_block* block, t_net* net);
 void add_block_to_blocklist(t_block* block);
 t_block* get_block_by_index(int block_index);
 t_boolean my_readline(FILE* fp, char** line);
+void print_netlist_stats(void);
 
 //================================================================================================
 // INTERNAL FUCTION IMPLIMENTATIONS
@@ -130,8 +131,7 @@ void parse_netlist(const char* filename) {
         }
     }
 
-    printf("\tAdded %d Blocks\n", blocklist->num_blocks);
-    printf("\tAdded %d Nets\n", netlist->num_nets);
+    print_netlist_stats();
 
     fclose(fp);
 
@@ -155,6 +155,8 @@ t_block* parse_block_conectivity(char* line) {
     block->is_fixed = FALSE;
     block->num_nets = 0;
     block->associated_nets = NULL;
+    block->num_pnets = 0;
+    block->equivalent_pnets = NULL;
 
     //Duplicate string first, since strtok destroys
     //the input string
@@ -332,7 +334,7 @@ void add_block_to_blocklist(t_block* block) {
  * Returns the block at block_index in the global 
  *  blocklist structure
  */
-t_block* get_block_by_index(block_index) {
+t_block* get_block_by_index(int block_index) {
     t_blocklist* blocklist = g_CHIP->blocklist;
 
     //Range check
@@ -373,4 +375,47 @@ t_boolean my_readline(FILE* fp, char** line) {
         return FALSE;
     }
     return TRUE;
+}
+
+void print_netlist_stats(void){
+    t_blocklist* blocklist = g_CHIP->blocklist;
+    t_netlist* netlist = g_CHIP->netlist;
+    printf("\tAdded %d Blocks\n", blocklist->num_blocks);
+    printf("\tAdded %d Nets\n", netlist->num_nets);
+
+    t_net* highest_fanout_net = NULL;
+    float avg_fanout = 0.;
+    for(int net_index = 1; net_index <= netlist->num_nets; net_index++) {
+        if(netlist->valid_nets[net_index]) {
+
+            t_net* net = netlist->array_of_nets[net_index];
+
+            if(highest_fanout_net == NULL || net->num_blocks > highest_fanout_net->num_blocks) {
+                highest_fanout_net = net;
+            }
+
+            avg_fanout += net->num_blocks;
+        } else {
+            printf("Warn: net index '%d' is invalid\n", net_index);
+        }
+    }
+
+    avg_fanout /= netlist->num_nets;
+
+    printf("\tHighest Fanout Net is '%d' with fanout %d\n", highest_fanout_net->index, highest_fanout_net->num_blocks);
+    printf("\tAverage Fanout is %.2f blocks\n", avg_fanout);
+
+    t_block* most_connected_block = NULL;
+    float avg_block_connectivity = 0.;
+    for(int block_index = 1; block_index <= blocklist->num_blocks; block_index++) {
+        t_block* block = blocklist->array_of_blocks[block_index];
+
+        if(most_connected_block == NULL || block->num_nets > most_connected_block->num_nets) {
+            most_connected_block = block;
+        }
+        avg_block_connectivity += block->num_nets;
+    }
+    avg_block_connectivity /= blocklist->num_blocks;
+    printf("\tMost connected block is #%d '%s' connected to %d nets\n", most_connected_block->index, most_connected_block->name, most_connected_block->num_nets);
+    printf("\tAverage connectivity is %.2f nets\n", avg_block_connectivity);
 }

@@ -59,7 +59,10 @@ struct s_block {
     t_boolean is_fixed;
 
     int num_nets;
-    t_net** associated_nets; //[0..num_blocks-1]
+    t_net** associated_nets; //[0..num_nets-1]
+
+    int num_pnets;
+    t_pnet*** equivalent_pnets; //[0..num_pnets-1]
 };
 
 /*

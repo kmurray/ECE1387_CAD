@@ -2,6 +2,7 @@
 // INCLUDES 
 //================================================================================================
 #include <assert.h>
+#include <time.h>
 #include <umfpack.h>
 #include <data_structs.h>
 #include <util.h>
@@ -19,6 +20,7 @@ double* build_anchoring_vector(t_axis axis, t_moveable_blocks* moveable_blocks);
 double get_anchoring_vector_entry(t_axis axis, int row, t_moveable_blocks* moveable_blocks);
 void call_solver(t_ccm* Q, double* x, double* b);
 void update_block_locations(t_axis axis, t_moveable_blocks* moveable_blocks, double* x);
+double get_entry(t_ccm* M, int row, int col);
 
 //================================================================================================
 // INTERNAL FUCTION IMPLIMENTATIONS
@@ -30,8 +32,11 @@ t_boolean solve_system(void) {
     //The connectivity matrix is valid for both X and Y solves
     printf("Generating Connectivity Matrix...\n");
     t_ccm* Q = my_malloc(sizeof(t_ccm));
+    clock_t cstart = clock();
     build_connectivity_matrix(moveable_blocks, Q);
-    printf("Done\n");
+    clock_t cend = clock();
+    float blocks_per_second = moveable_blocks->num_blocks / ((cend - cstart)*1e-6);
+    printf("Done (%.2f blocks per second)\n", blocks_per_second);
 
     t_axis axis;
     for(axis = X_AXIS; axis <= Y_AXIS; axis++) {
@@ -43,26 +48,26 @@ t_boolean solve_system(void) {
         }
 
 
-        printf("Matrix Q:\n");
+        /*printf("Matrix Q:\n");*/
         /*dump_ccm(Q);*/
 
         double* b = build_anchoring_vector(axis, moveable_blocks);
 
-        printf("Anchoring Vector:\n");
-        int index;
-        /*for (index = 0; index < moveable_blocks->num_blocks; index++) printf("b[%d] = %.2f\n", index, b[index]);*/
+        /*printf("Anchoring Vector:\n");*/
+        /*for (int index = 0; index < moveable_blocks->num_blocks; index++) printf("b[%d] = %.2f\n", index, b[index]);*/
 
         double x[moveable_blocks->num_blocks];
-        for(index = 0; index < moveable_blocks->num_blocks; index++) {
+        for(int index = 0; index < moveable_blocks->num_blocks; index++) {
             x[index] = 0.;
         }
 
         call_solver(Q, x, b);
 
-        int i;
-        /*for (i = 0 ; i < moveable_blocks->num_blocks ; i++) printf ("soln[%d] = %g\n", i, x [i]) ;*/
+        /*for (int i = 0 ; i < moveable_blocks->num_blocks ; i++) printf ("soln[%d] = %g\n", i, x [i]) ;*/
 
         update_block_locations(axis, moveable_blocks, x);
+
+        free(b);
     }
 
     return TRUE;
@@ -179,17 +184,32 @@ void build_connectivity_matrix(t_moveable_blocks* moveable_blocks, t_ccm* Q) {
         //Set the column pointer for this column
         Q->col_ptrs[col] = val_index;
 
-        for(row = 0; row < Q->num_rows; row++) {
-            //Grab the values of this matrix entry
-            double value = get_connectivity_matrix_entry(row, col, moveable_blocks);            
-
-            //Only non-zero entries are stored
-            /*if(value != 0.) {*/
+        // The Q matrix is symmetric around the diagonal, so 
+        // reference the already calculated lower triangular elements
+        // to buid the upper triangular (rather than re-calculating) 
+        for(row = 0; row < col; row++) {
+            double value = get_entry(Q, col, row);
+            if(value != 0.) {
                 Q->values[val_index] = value;
                 Q->row_indexs[val_index] = row;
 
                 val_index++;
-            /*}*/
+            }
+            
+        }
+
+        //Calculate the lower triangular (including diagonal)
+        for(row = col; row < Q->num_rows; row++) {
+            //Grab the values of this matrix entry
+            double value = get_connectivity_matrix_entry(row, col, moveable_blocks);            
+
+            //Only non-zero entries are stored
+            if(value != 0.) {
+                Q->values[val_index] = value;
+                Q->row_indexs[val_index] = row;
+
+                val_index++;
+            }
         }
     }
 
@@ -214,6 +234,23 @@ void build_connectivity_matrix(t_moveable_blocks* moveable_blocks, t_ccm* Q) {
     //First entry must be zero in column pointer
     assert(Q->col_ptrs[0] == 0);
     assert(Q->col_ptrs[Q->num_cols] = Q->num_values);
+}
+
+double get_entry(t_ccm* M, int row, int col) {
+    int col_ptr = M->col_ptrs[col];
+    int next_col_ptr = M->col_ptrs[col+1];
+
+    int val_index;
+    for(val_index = col_ptr; val_index < next_col_ptr; val_index++) {
+        if(M->row_indexs[val_index] == row) {
+            return M->values[val_index];
+        }
+
+    }
+
+    //Not found, must be zero
+    return 0.;
+
 }
 
 double* build_anchoring_vector(t_axis axis, t_moveable_blocks* moveable_blocks){
@@ -283,44 +320,37 @@ double get_connectivity_matrix_entry(int row, int col, t_moveable_blocks* moveab
     t_block* row_block = get_block_by_row_index(row, moveable_blocks);
     t_block* col_block = get_block_by_row_index(col, moveable_blocks);
 
+    
+    //Faster direct look-up code
+    //       Old               New              New2
+    // ap_1: 1375 block/sec    16500 block/sec  
+    // ap_2: 63.17 blk/sec     622.32 blk/sec   
+    // ap_3:
+    //
+    for(int pnet_index = 0; pnet_index < row_block->num_pnets; pnet_index++) {
+        t_pnet* pnet = row_block->equivalent_pnets[pnet_index];
 
-    //Loop through all the nets connected
-    int net_index;
-    for(net_index = 0; net_index < row_block->num_nets; net_index++) {
+        if (row == col) {
+            //On diagonal elements are the sum of all connected wieghts
+            // for the pnets connected to this block
 
-        //Each logically connected block
-        t_net* logical_net = row_block->associated_nets[net_index];
+            // Sum the weights
+            entry_value += pnet->weight;
+        } else {
+            //Off diagonal elements are the NEGATIVE sum of connected weights
+            // between row_block and column_block
 
-        //Loop through all the pnets that represent this logical net
-        int pnet_index;
-        for(pnet_index = 0; pnet_index < logical_net->num_pnets; pnet_index++) {
-            t_pnet* pnet = logical_net->equivalent_pnets[pnet_index];
+            if( (pnet->block_a == row_block && pnet->block_b == col_block) ||
+                (pnet->block_b == row_block && pnet->block_a == col_block) ) {
+                //Only do the negative sum of the pnet is between row_block and
+                //col_block
 
-            if(pnet->block_a == row_block || pnet->block_b == row_block) {
-                if (row == col) {
-                    //On diagonal elements are the sum of all connected wieghts
-                    // for the pnets connected to this block
-
-                    // Sum the weights
-                    entry_value += pnet->weight;
-                } else {
-                    //Off diagonal elements are the NEGATIVE sum of connected weights
-                    // between row_block and column_block
-
-                    if( (pnet->block_a == row_block && pnet->block_b == col_block) ||
-                        (pnet->block_b == row_block && pnet->block_a == col_block) ) {
-                        //Only do the negative sum of the pnet is between row_block and
-                        //col_block
-
-                        //Negative sum of the weight
-                        entry_value -= pnet->weight;
-                    }
-
-                }
+                //Negative sum of the weight
+                entry_value -= pnet->weight;
             }
+
         }
     }
-
 
     return entry_value;
 }
