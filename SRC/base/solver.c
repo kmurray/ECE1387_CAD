@@ -30,21 +30,18 @@ t_boolean solve_system(void) {
     t_moveable_blocks* moveable_blocks = find_num_moveable_objects();
 
     //The connectivity matrix is valid for both X and Y solves
-    printf("Generating Connectivity Matrix...\n");
+    DEBUG_PRINT(EXTRA_INFO, "Generating Connectivity Matrix...\n");
     t_ccm* Q = my_malloc(sizeof(t_ccm));
-    clock_t cstart = clock();
     build_connectivity_matrix(moveable_blocks, Q);
-    clock_t cend = clock();
-    float blocks_per_second = moveable_blocks->num_blocks / ((cend - cstart)*1e-6);
-    printf("Done (%.2f blocks per second)\n", blocks_per_second);
+    DEBUG_PRINT(EXTRA_INFO, "DONE\n");
 
     t_axis axis;
     for(axis = X_AXIS; axis <= Y_AXIS; axis++) {
 
         if(axis == X_AXIS) {
-            printf("\nSolving X-Axis System\n");
+            DEBUG_PRINT(EXTRA_INFO, "\nSolving X-Axis System\n");
         } else {
-            printf("\nSolving Y-Axis System\n");
+            DEBUG_PRINT(EXTRA_INFO, "\nSolving Y-Axis System\n");
         }
 
 
@@ -61,7 +58,10 @@ t_boolean solve_system(void) {
             x[index] = 0.;
         }
 
+        DEBUG_PRINT(EXTRA_INFO, "Calling solver...\n");
         call_solver(Q, x, b);
+        DEBUG_PRINT(EXTRA_INFO, "DONE\n");
+
 
         /*for (int i = 0 ; i < moveable_blocks->num_blocks ; i++) printf ("soln[%d] = %g\n", i, x [i]) ;*/
 
@@ -86,7 +86,6 @@ void update_block_locations(t_axis axis, t_moveable_blocks* moveable_blocks, dou
 }
 
 void call_solver(t_ccm* Q, double* x, double* b) {
-    printf("Calling solver...\n");
 
     assert(Q->num_rows == Q->num_cols);
 
@@ -112,9 +111,11 @@ void call_solver(t_ccm* Q, double* x, double* b) {
     /*umfpack_di_report_control(Control);*/
     /*umfpack_di_report_info(Control, Info);*/
     //UMFPACK stats:
-    printf("UMFPACK Returned status: %.2f\n", Info[UMFPACK_STATUS]);
-    printf("UMFAPCK solve took %.2f FLOPs\n", Info[UMFPACK_SOLVE_FLOPS]);
-    printf("UMFAPCK solve took %.2f s\n", Info[UMFPACK_SOLVE_TIME]);
+    /*
+     *printf("UMFPACK Returned status: %.2f\n", Info[UMFPACK_STATUS]);
+     *printf("UMFAPCK solve took %.2f FLOPs\n", Info[UMFPACK_SOLVE_FLOPS]);
+     *printf("UMFAPCK solve took %.2f s\n", Info[UMFPACK_SOLVE_TIME]);
+     */
     if(Info[UMFPACK_STATUS] == UMFPACK_WARNING_singular_matrix) {
         printf("UMFAPCK Singular matrix, divide by zero occured\n");
     }
@@ -132,7 +133,6 @@ void call_solver(t_ccm* Q, double* x, double* b) {
     }
     umfpack_di_free_numeric (&Numeric) ;
 
-    printf("DONE\n");
 
 }
 
@@ -270,38 +270,33 @@ double get_anchoring_vector_entry(t_axis axis, int row, t_moveable_blocks* movea
 
     double entry = 0.;
 
-    assert(row < moveable_blocks->num_blocks);
-    t_block* block = moveable_blocks->array_of_blocks[row];
+    t_block* row_block = get_block_by_row_index(row, moveable_blocks);
 
-    int net_index;
-    for(net_index = 0; net_index < block->num_nets; net_index++) {
-        t_net* logical_net = block->associated_nets[net_index];
+    for(int pnet_index = 0; pnet_index < row_block->num_pnets; pnet_index++) {
+        t_pnet* pnet = row_block->associated_pnets[pnet_index];
+        t_block* fixed_block;
 
-        int pnet_index;
-        for(pnet_index = 0; pnet_index < logical_net->num_pnets; pnet_index++) {
-            t_pnet* pnet = logical_net->equivalent_pnets[pnet_index];
-            t_block* fixed_block;
-
-            if (pnet->block_a != block && pnet->block_b == block && pnet->block_a->is_fixed == TRUE) {
-                fixed_block = pnet->block_a;
-                
-            } else if (pnet->block_b != block && pnet->block_a == block && pnet->block_b->is_fixed == TRUE) {
-                fixed_block = pnet->block_b;
-            } else {
-                //pnet not attached to a fixed position block
-                continue;
-            }
-           
-            double location;
-            if(axis == X_AXIS) {
-                location = fixed_block->x;
-            } else { //Y_AXIS
-                location = fixed_block->y;
-            }
-            entry += pnet->weight*location;
+        if (pnet->block_a != row_block && pnet->block_b == row_block && pnet->block_a->is_fixed == TRUE) {
+            fixed_block = pnet->block_a;
+            
+        } else if (pnet->block_b != row_block && pnet->block_a == row_block && pnet->block_b->is_fixed == TRUE) {
+            fixed_block = pnet->block_b;
+        } else {
+            //pnet not attached to a fixed position block
+            continue;
+        }
+       
+        double fixed_location;
+        if(axis == X_AXIS) {
+            fixed_location = fixed_block->x;
+        } else { //Y_AXIS
+            fixed_location = fixed_block->y;
         }
 
+        //The entry is the sum of all weights*fixed_locations
+        entry += pnet->weight*fixed_location;
     }
+
     return entry;
 }
 
@@ -328,7 +323,7 @@ double get_connectivity_matrix_entry(int row, int col, t_moveable_blocks* moveab
     // ap_3:
     //
     for(int pnet_index = 0; pnet_index < row_block->num_pnets; pnet_index++) {
-        t_pnet* pnet = row_block->equivalent_pnets[pnet_index];
+        t_pnet* pnet = row_block->associated_pnets[pnet_index];
 
         if (row == col) {
             //On diagonal elements are the sum of all connected wieghts

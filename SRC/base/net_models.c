@@ -12,6 +12,8 @@
 //================================================================================================
 void create_pseudo_net(float weight, t_block* block_a, t_block* block_b);
 void add_pnet_to_block(t_pnet* pnet, t_block* block);
+void remove_pnets_net(t_net* logical_net);
+void remove_pnets_block(t_block* block);
 
 //================================================================================================
 // INTERNAL FUCTION IMPLIMENTATIONS
@@ -80,7 +82,45 @@ void clique_model(t_net* logical_net) {
 
 void add_pnet_to_block(t_pnet* pnet, t_block* block) {
     block->num_pnets++; 
-    block->equivalent_pnets = my_realloc(block->equivalent_pnets, sizeof(t_pnet*)*block->num_pnets);
+    block->associated_pnets = my_realloc(block->associated_pnets, sizeof(t_pnet*)*block->num_pnets);
 
-    block->equivalent_pnets[block->num_pnets - 1] = pnet;
+    block->associated_pnets[block->num_pnets - 1] = pnet;
+}
+
+void remove_all_pnets(void) {
+    t_netlist* netlist = g_CHIP->netlist;
+    t_blocklist* blocklist = g_CHIP->blocklist;
+
+    for(int net_index = 1; net_index <= netlist->num_nets; net_index++) {
+        t_net* logical_net = netlist->array_of_nets[net_index];
+
+        remove_pnets_net(logical_net);
+    }
+    for(int block_index = 1; block_index <= blocklist->num_blocks; block_index++) {
+        t_block* block = blocklist->array_of_blocks[block_index];
+
+        remove_pnets_block(block);
+    }
+}
+
+void remove_pnets_net(t_net* logical_net) {
+    
+    for(int pnet_index = 0; pnet_index < logical_net->num_pnets; pnet_index++) {
+        t_pnet* pnet = logical_net->equivalent_pnets[pnet_index];
+
+        //Free each pnet structure
+        free(pnet);
+    }
+    //Reset for pnet reallocation
+    logical_net->num_pnets = 0;
+    free(logical_net->equivalent_pnets);
+    logical_net->equivalent_pnets = NULL;
+}
+
+void remove_pnets_block(t_block* block) {
+    block->num_pnets = 0;
+
+    //Don't need to free the actual pnets (just the pointers) since they are freed by each logical net
+    free(block->associated_pnets);
+    
 }

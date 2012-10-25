@@ -2,13 +2,8 @@
 -1
 mid_left_IO     1   1       -1
 mid_right_IO    2   2       -1
-top_left_IO     3   3       -1
-lower_right_IO  4   4       -1
 blk5            5   2 1     -1
-blk6            6   2 3 4   -1
 -1
 mid_left_IO     1   0   5
 mid_right_IO    2   10  5
-top_left_IO     3   2   10
-lower_right_IO  4   10  1
 -1

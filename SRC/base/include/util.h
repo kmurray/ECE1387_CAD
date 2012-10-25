@@ -11,6 +11,7 @@
 
 // Debug levels
 #define EXTRA_INFO 10
+#define NORMAL_INFO 5
 
 
 void* my_malloc(size_t size);

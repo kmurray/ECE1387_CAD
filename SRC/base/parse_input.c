@@ -156,7 +156,7 @@ t_block* parse_block_conectivity(char* line) {
     block->num_nets = 0;
     block->associated_nets = NULL;
     block->num_pnets = 0;
-    block->equivalent_pnets = NULL;
+    block->associated_pnets = NULL;
 
     //Duplicate string first, since strtok destroys
     //the input string

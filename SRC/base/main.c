@@ -4,6 +4,7 @@
 #include <draw.h>
 #include <net_models.h>
 #include <solver.h>
+#include <verify.h>
 //the global CHIP data sturcture
 t_CHIP* g_CHIP;
 
@@ -29,6 +30,7 @@ int main (int argc, char** argv) {
     start_interactive_graphics();
 
     solve_system();
+    evaluate_qor();
 
     start_interactive_graphics();
     return 0;

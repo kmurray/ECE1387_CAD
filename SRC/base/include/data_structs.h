@@ -4,7 +4,6 @@
 typedef struct s_CHIP t_CHIP;
 typedef struct s_blocklist t_blocklist;
 typedef struct s_netlist t_netlist;
-typedef struct s_pnetlist t_pnetlist;
 typedef struct s_block t_block;
 typedef struct s_net t_net;
 typedef struct s_pnet t_pnet;
@@ -40,11 +39,6 @@ struct s_netlist {
     t_boolean* valid_nets; //[1..num_nets]
 };
 
-struct s_pnetlist {
-    int max_len;  //The actual size of array_of_pnets
-    int num_pnets;
-    t_net** array_of_pnets; //[0..num_nets-1]
-};
 
 /*
  * The placement primitive, representing a
@@ -62,7 +56,7 @@ struct s_block {
     t_net** associated_nets; //[0..num_nets-1]
 
     int num_pnets;
-    t_pnet*** equivalent_pnets; //[0..num_pnets-1]
+    t_pnet** associated_pnets; //[0..num_pnets-1]
 };
 
 /*

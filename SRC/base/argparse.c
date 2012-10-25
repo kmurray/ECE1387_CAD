@@ -72,7 +72,7 @@ static void set_default_args(t_arguments* args) {
     args->verbosity = 100;
     args->netlist_file = NULL;
     args->interactive_graphics = 0;
-    args->draw_nets = 1;
+    args->draw_nets = 0;
 }
 
 

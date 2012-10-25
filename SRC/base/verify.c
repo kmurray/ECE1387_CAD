@@ -1,0 +1,74 @@
+//================================================================================================
+// INCLUDES 
+//================================================================================================
+#include <assert.h>
+#include <data_structs.h>
+#include <util.h>
+#include <verify.h>
+
+//================================================================================================
+// INTERNAL FUNCTION DECLARTAIONS 
+//================================================================================================
+double calc_hpwl_netlist(t_netlist* netlist);
+double calc_hpwl_net(t_net* net);
+
+//================================================================================================
+// INTERNAL FUCTION IMPLIMENTATIONS
+//================================================================================================
+void evaluate_qor(void) {
+    t_netlist* netlist = g_CHIP->netlist;
+
+    double hpwl = calc_hpwl_netlist(netlist);
+
+
+    printf("\nQoR:\n");
+    printf("    Total HPWL: %.2f\n", hpwl);
+}
+
+double calc_hpwl_netlist(t_netlist* netlist) {
+    double hpwl = 0.;
+
+    for(int net_index = 1; net_index <= netlist->num_nets; net_index++) {
+        if(netlist->valid_nets[net_index]) {
+            t_net* net = netlist->array_of_nets[net_index];
+
+            hpwl += calc_hpwl_net(net);
+        }
+    }
+
+    return hpwl;
+}
+
+double calc_hpwl_net(t_net* net) {
+    //Bounding box dimensions
+    double bb_left;
+    double bb_right;
+    double bb_top;
+    double bb_bot;
+
+    for(int block_index = 0; block_index < net->num_blocks; block_index++) {
+        t_block* block = net->associated_blocks[block_index];
+
+        if(block_index == 0) {
+            bb_left = block->x;
+            bb_right = block->x;
+            bb_top = block->y;
+            bb_bot = block->y;
+        }
+
+        if(block->x < bb_left) bb_left = block->x;
+        if(block->x > bb_right) bb_right = block->x;
+        if(block->y > bb_top) bb_top = block->y;
+        if(block->y < bb_bot) bb_bot = block->y;
+    }
+
+    assert(bb_left <= bb_right);
+    assert(bb_bot <= bb_top);
+
+    //The HPWL
+    double hpwl = (bb_right - bb_left) + (bb_top - bb_bot);
+    assert(hpwl >= 0);
+    assert(hpwl <= g_CHIP->x_dim + g_CHIP->y_dim); //At most the length of the chip
+
+    return hpwl;
+}
