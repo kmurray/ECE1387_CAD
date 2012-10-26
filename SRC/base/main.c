@@ -5,6 +5,7 @@
 #include <net_models.h>
 #include <solver.h>
 #include <verify.h>
+#include <place.h>
 //the global CHIP data sturcture
 t_CHIP* g_CHIP;
 
@@ -23,16 +24,11 @@ int main (int argc, char** argv) {
     init_graphics("kplace graphics");
     //start_interactive_graphics();
 
-    printf("Generating net Model...\n");
-    generate_pnets(&clique_model);
-    printf("DONE\n");
+    solve_clique();
 
-    start_interactive_graphics();
+    solve_bound2bound();
 
-    solve_system();
-    evaluate_qor();
-
-    start_interactive_graphics();
+    printf("\nTool Finished - exiting...\n");
     return 0;
 }
 

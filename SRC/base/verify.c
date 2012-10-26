@@ -2,6 +2,7 @@
 // INCLUDES 
 //================================================================================================
 #include <assert.h>
+#include <math.h>
 #include <data_structs.h>
 #include <util.h>
 #include <verify.h>
@@ -11,6 +12,7 @@
 //================================================================================================
 double calc_hpwl_netlist(t_netlist* netlist);
 double calc_hpwl_net(t_net* net);
+double evaluate_pnet_objective(t_pnet* pnet);
 
 //================================================================================================
 // INTERNAL FUCTION IMPLIMENTATIONS
@@ -18,11 +20,14 @@ double calc_hpwl_net(t_net* net);
 void evaluate_qor(void) {
     t_netlist* netlist = g_CHIP->netlist;
 
+    double objective_value = evaluate_objective();
     double hpwl = calc_hpwl_netlist(netlist);
 
 
+
     printf("\nQoR:\n");
-    printf("    Total HPWL: %.2f\n", hpwl);
+    printf("    Objective Fn: %.2f\n", objective_value);
+    printf("    Total HPWL  : %.2f\n", hpwl);
 }
 
 double calc_hpwl_netlist(t_netlist* netlist) {
@@ -71,4 +76,36 @@ double calc_hpwl_net(t_net* net) {
     assert(hpwl <= g_CHIP->x_dim + g_CHIP->y_dim); //At most the length of the chip
 
     return hpwl;
+}
+
+double evaluate_objective(void) {
+    double objective_value = 0.;
+    t_netlist* netlist = g_CHIP->netlist;
+
+    for(int net_index = 1; net_index <= netlist->num_nets; net_index++) {
+        t_net* logical_net = netlist->array_of_nets[net_index];
+
+        for(int pnet_index = 0; pnet_index < logical_net->num_pnets; pnet_index++) {
+            t_pnet* pnet = logical_net->equivalent_pnets[pnet_index];
+           
+            objective_value += evaluate_pnet_objective(pnet);
+
+        }
+    }
+    return objective_value;
+}
+
+double evaluate_pnet_objective(t_pnet* pnet) {
+    double x_objective, y_objective;
+    double dist;
+
+    //X axis
+    dist = pnet->block_a->x - pnet->block_b->x;
+    x_objective = pnet->weight_x*pow(dist, 2);
+
+    //Y axis
+    dist = pnet->block_a->y - pnet->block_b->y;
+    y_objective = pnet->weight_y*pow(dist, 2);
+
+    return x_objective + y_objective;
 }

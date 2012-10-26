@@ -3,17 +3,20 @@
 //================================================================================================
 #include <assert.h>
 #include <time.h>
+#include <math.h>
 #include <umfpack.h>
 #include <data_structs.h>
 #include <util.h>
 #include <solver.h>
+#include <verify.h>
+#include <draw.h>
 
 //================================================================================================
 // INTERNAL FUNCTION DECLARTAIONS 
 //================================================================================================
 t_moveable_blocks* find_num_moveable_objects(void);
-double get_connectivity_matrix_entry(int row, int col, t_moveable_blocks* moveable_blocks);
-void build_connectivity_matrix(t_moveable_blocks* moveable_blocks, t_ccm* Q);
+double get_connectivity_matrix_entry(t_axis axis, int row, int col, t_moveable_blocks* moveable_blocks);
+void build_connectivity_matrix(t_axis axis, t_moveable_blocks* moveable_blocks, t_ccm* Q);
 t_block* get_block_by_row_index(int row, t_moveable_blocks* moveable_blocks);
 void dump_ccm(t_ccm* M);
 double* build_anchoring_vector(t_axis axis, t_moveable_blocks* moveable_blocks);
@@ -25,25 +28,25 @@ double get_entry(t_ccm* M, int row, int col);
 //================================================================================================
 // INTERNAL FUCTION IMPLIMENTATIONS
 //================================================================================================
-t_boolean solve_system(void) {
+double solve_system(void) {
 
     t_moveable_blocks* moveable_blocks = find_num_moveable_objects();
 
     //The connectivity matrix is valid for both X and Y solves
-    DEBUG_PRINT(EXTRA_INFO, "Generating Connectivity Matrix...\n");
-    t_ccm* Q = my_malloc(sizeof(t_ccm));
-    build_connectivity_matrix(moveable_blocks, Q);
-    DEBUG_PRINT(EXTRA_INFO, "DONE\n");
 
     t_axis axis;
     for(axis = X_AXIS; axis <= Y_AXIS; axis++) {
 
         if(axis == X_AXIS) {
-            DEBUG_PRINT(EXTRA_INFO, "\nSolving X-Axis System\n");
+            DEBUG_PRINT(EXTRA_INFO, "\n    Solving X-Axis System\n");
         } else {
-            DEBUG_PRINT(EXTRA_INFO, "\nSolving Y-Axis System\n");
+            DEBUG_PRINT(EXTRA_INFO, "\n    Solving Y-Axis System\n");
         }
 
+        DEBUG_PRINT(EXTRA_INFO, "\tGenerating Connectivity Matrix...\n");
+        t_ccm* Q = my_malloc(sizeof(t_ccm));
+        build_connectivity_matrix(axis, moveable_blocks, Q);
+        DEBUG_PRINT(EXTRA_INFO, "\tDONE\n");
 
         /*printf("Matrix Q:\n");*/
         /*dump_ccm(Q);*/
@@ -58,9 +61,9 @@ t_boolean solve_system(void) {
             x[index] = 0.;
         }
 
-        DEBUG_PRINT(EXTRA_INFO, "Calling solver...\n");
+        DEBUG_PRINT(EXTRA_INFO, "\tCalling solver...\n");
         call_solver(Q, x, b);
-        DEBUG_PRINT(EXTRA_INFO, "DONE\n");
+        DEBUG_PRINT(EXTRA_INFO, "\tDONE\n");
 
 
         /*for (int i = 0 ; i < moveable_blocks->num_blocks ; i++) printf ("soln[%d] = %g\n", i, x [i]) ;*/
@@ -70,8 +73,10 @@ t_boolean solve_system(void) {
         free(b);
     }
 
-    return TRUE;
+
+    return evaluate_objective();
 }
+
 
 void update_block_locations(t_axis axis, t_moveable_blocks* moveable_blocks, double* x){
     int block_index;
@@ -83,6 +88,7 @@ void update_block_locations(t_axis axis, t_moveable_blocks* moveable_blocks, dou
             block->y = x[block_index];
         }
     }
+    draw_screen();
 }
 
 void call_solver(t_ccm* Q, double* x, double* b) {
@@ -96,9 +102,12 @@ void call_solver(t_ccm* Q, double* x, double* b) {
 
     umfpack_di_defaults(Control);
     Control[UMFPACK_PRL] = 5.;
-    /*printf("--\n");*/
-    /*umfpack_di_report_matrix (Q->num_rows, Q->num_cols, Q->col_ptrs, Q->row_indexs, Q->values, 1, Control) ;*/
-    /*printf("--\n");*/
+
+#if DEBUG_MATRIX
+    printf("--\n");
+    umfpack_di_report_matrix (Q->num_rows, Q->num_cols, Q->col_ptrs, Q->row_indexs, Q->values, 1, Control) ;
+    printf("--\n");
+#endif
 
     umfpack_di_symbolic (Q->num_rows, Q->num_cols, Q->col_ptrs, Q->row_indexs, Q->values, &Symbolic, null, null) ;
     umfpack_di_numeric (Q->col_ptrs, Q->row_indexs, Q->values, Symbolic, &Numeric, null, null) ;
@@ -162,7 +171,9 @@ t_moveable_blocks* find_num_moveable_objects(void) {
     return moveable_blocks;
 }
 
-void build_connectivity_matrix(t_moveable_blocks* moveable_blocks, t_ccm* Q) {
+void build_connectivity_matrix(t_axis axis, t_moveable_blocks* moveable_blocks, t_ccm* Q) {
+
+    double smallest_mag, largest_mag;
 
     Q->num_rows = moveable_blocks->num_blocks;
     Q->num_cols = moveable_blocks->num_blocks;
@@ -187,28 +198,50 @@ void build_connectivity_matrix(t_moveable_blocks* moveable_blocks, t_ccm* Q) {
         // The Q matrix is symmetric around the diagonal, so 
         // reference the already calculated lower triangular elements
         // to buid the upper triangular (rather than re-calculating) 
-        for(row = 0; row < col; row++) {
-            double value = get_entry(Q, col, row);
-            if(value != 0.) {
-                Q->values[val_index] = value;
-                Q->row_indexs[val_index] = row;
-
-                val_index++;
-            }
-            
-        }
+/*
+ *        for(row = 0; row < col; row++) {
+ *            double value = get_entry(Q, col, row);
+ *            if(value != 0.) {
+ *                Q->values[val_index] = value;
+ *                Q->row_indexs[val_index] = row;
+ *
+ *                val_index++;
+ *            }
+ *            
+ *        }
+ */
 
         //Calculate the lower triangular (including diagonal)
-        for(row = col; row < Q->num_rows; row++) {
+        for(row = 0; row < Q->num_rows; row++) {
             //Grab the values of this matrix entry
-            double value = get_connectivity_matrix_entry(row, col, moveable_blocks);            
+            double value = get_connectivity_matrix_entry(axis, row, col, moveable_blocks);            
 
             //Only non-zero entries are stored
             if(value != 0.) {
+
+                if(!isfinite(value)) {
+                    printf("Found invalid matrix entry\n");
+                    assert(0);
+                }
+
                 Q->values[val_index] = value;
                 Q->row_indexs[val_index] = row;
 
                 val_index++;
+
+                //Debug statistics collection
+                if(row == 0 && col == 0) {
+                    largest_mag = my_abs(value);
+                    smallest_mag = my_abs(value);
+                } else {
+                    if (my_abs(value) > largest_mag) {
+                        largest_mag = my_abs(value);
+                    }
+                    if (my_abs(value) < smallest_mag) {
+                        smallest_mag = my_abs(value);
+                    }
+                }
+
             }
         }
     }
@@ -234,6 +267,13 @@ void build_connectivity_matrix(t_moveable_blocks* moveable_blocks, t_ccm* Q) {
     //First entry must be zero in column pointer
     assert(Q->col_ptrs[0] == 0);
     assert(Q->col_ptrs[Q->num_cols] = Q->num_values);
+
+
+#if 0
+    //Debug statistics
+    printf("Connectivity Matrix Info: SmallestMag: %f, LargestMag: %f\n", smallest_mag, largest_mag);
+#endif
+
 }
 
 double get_entry(t_ccm* M, int row, int col) {
@@ -276,6 +316,13 @@ double get_anchoring_vector_entry(t_axis axis, int row, t_moveable_blocks* movea
         t_pnet* pnet = row_block->associated_pnets[pnet_index];
         t_block* fixed_block;
 
+        double weight;
+        if(axis == X_AXIS) {
+            weight = pnet->weight_x;
+        } else {
+            weight = pnet->weight_y;
+        }
+
         if (pnet->block_a != row_block && pnet->block_b == row_block && pnet->block_a->is_fixed == TRUE) {
             fixed_block = pnet->block_a;
             
@@ -294,13 +341,13 @@ double get_anchoring_vector_entry(t_axis axis, int row, t_moveable_blocks* movea
         }
 
         //The entry is the sum of all weights*fixed_locations
-        entry += pnet->weight*fixed_location;
+        entry += weight*fixed_location;
     }
 
     return entry;
 }
 
-double get_connectivity_matrix_entry(int row, int col, t_moveable_blocks* moveable_blocks) {
+double get_connectivity_matrix_entry(t_axis axis, int row, int col, t_moveable_blocks* moveable_blocks) {
     /*
      *if(row == col) {
      *    return 1.;
@@ -325,12 +372,19 @@ double get_connectivity_matrix_entry(int row, int col, t_moveable_blocks* moveab
     for(int pnet_index = 0; pnet_index < row_block->num_pnets; pnet_index++) {
         t_pnet* pnet = row_block->associated_pnets[pnet_index];
 
+        double weight;
+        if(axis == X_AXIS) {
+            weight = pnet->weight_x;
+        } else { //axis == Y_AXIS
+            weight = pnet->weight_y;
+        }
+
         if (row == col) {
             //On diagonal elements are the sum of all connected wieghts
             // for the pnets connected to this block
 
             // Sum the weights
-            entry_value += pnet->weight;
+            entry_value += weight;
         } else {
             //Off diagonal elements are the NEGATIVE sum of connected weights
             // between row_block and column_block
@@ -341,10 +395,14 @@ double get_connectivity_matrix_entry(int row, int col, t_moveable_blocks* moveab
                 //col_block
 
                 //Negative sum of the weight
-                entry_value -= pnet->weight;
+                entry_value -= weight;
             }
 
         }
+    }
+    if(!isfinite(entry_value)) {
+        printf("Found invalid matrix entry\n");
+        assert(0);
     }
 
     return entry_value;

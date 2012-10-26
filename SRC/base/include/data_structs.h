@@ -12,7 +12,7 @@ typedef struct s_movable_blocks t_moveable_blocks;
 
 typedef enum e_boolean {FALSE = 0, TRUE} t_boolean;
 typedef enum e_block_type {PSEUDO = 1, REAL} t_block_type;
-typedef enum e_axies {X_AXIS, Y_AXIS} t_axis;
+typedef enum e_axies {X_AXIS = 0, Y_AXIS} t_axis;
 
 struct s_CHIP {
     int x_dim;
@@ -81,7 +81,8 @@ struct s_pnet {
     t_block* block_a;
     t_block* block_b;
     
-    double weight;
+    double weight_x;
+    double weight_y;
 };
 /*
  * A Compressed Column Matrix

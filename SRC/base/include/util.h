@@ -20,6 +20,10 @@ void* my_realloc(void* ptr, size_t size);
 
 void* my_calloc(size_t size_of_item, size_t num_items);
 
+double my_abs(double a);
+
+double my_pct_diff(double orig, double new);
+
 void die (const char * format, ...);
 
 #endif

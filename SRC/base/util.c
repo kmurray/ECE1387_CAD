@@ -32,6 +32,20 @@ void* my_calloc(size_t num_items, size_t size_of_item) {
     return retval;
 }
 
+double my_abs(double a) {
+    if(a >= 0) {
+        return a;
+    } else {
+        return -1*a;
+    }
+}
+
+double my_pct_diff(double orig, double new) {
+    double diff = my_abs(orig - new);
+
+    return diff/orig*100;
+}
+
 void die (const char * format, ...) {
     va_list vargs;
     va_start (vargs, format);
