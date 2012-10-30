@@ -36,6 +36,7 @@ t_region* find_maximal_region(t_gridsquare_list* cl);
 t_moveable_blocks* find_moveable_blocks(t_cluster* cluster);
 void add_block_to_moveable_blocks(t_moveable_blocks* movable_blocks, t_block* block);
 void sort_blocks(t_axis cut_axis, t_moveable_blocks* moveable_blocks);
+void verify_sorted_order(t_axis cut_axis, t_moveable_blocks* blocks);
 int compare_block_pos_x(const void* elem1, const void* elem2);
 int compare_block_pos_y(const void* elem1, const void* elem2);
 
@@ -51,9 +52,10 @@ double find_cell_cut(t_axis cut_axis, t_cluster* cluster);
 double find_region_cut(t_axis cut_axis, t_cluster* cluster);
 void split_cells(t_axis cut_axis, t_moveable_blocks* cluster_blocks, double cut, t_moveable_blocks** blocks_A_ref, t_moveable_blocks** blocks_B_ref);
 void split_region(t_axis cut_axis, t_region* region, double cut, t_region** region_A_ref, t_region** region_B_ref);
+void set_block_set(t_moveable_blocks* blocks, t_set set);
 
 //Legalize a split region
-t_cluster* legalize_cells_in_region(t_axis cut_axis, t_region* region, t_moveable_blocks* blocks, double gamma);
+t_cluster* legalize_cells_in_region(t_axis cut_axis, t_region* region, t_moveable_blocks* blocks, double gamma, t_boolean positive);
 
 //Anchor pnet creation
 void create_anchor_block_pnet(t_block* block, t_block* new_legalized_anchor, double alpha);
@@ -79,8 +81,23 @@ void lookahead_legalization(double gamma) {
         t_cluster* cluster = cluster_list->array_of_clusters[cluster_index];
         assert(cluster->blocks->num_blocks > 0);
 
+        t_region* base_region = (t_region*) my_malloc(sizeof(t_region));
+        base_region->x_min = cluster->region->x_min - 0.1;
+        base_region->x_max = cluster->region->x_max + 0.1;
+        base_region->y_min = cluster->region->y_min - 0.1;
+        base_region->y_max = cluster->region->y_max + 0.1;
+        g_CHIP->base_region = base_region;
+
+
         //Expand the cluster to a total area s.t. util < gamma
         t_cluster* expanded_cluster = expand_cluster(cluster, gamma);
+        
+        t_region* expanded_region = (t_region*) my_malloc(sizeof(t_region));
+        expanded_region->x_min = cluster->region->x_min - 0.1;
+        expanded_region->x_max = cluster->region->x_max + 0.1;
+        expanded_region->y_min = cluster->region->y_min - 0.1;
+        expanded_region->y_max = cluster->region->y_max + 0.1;
+        g_CHIP->expanded_region = expanded_region;
 
         std::queue<t_cluster*> cluster_queue;
 
@@ -101,13 +118,19 @@ void lookahead_legalization(double gamma) {
             
             //Are we done yet?
             if(cluster_area < 4*g_CHIP->grid_area || cluster->level >= 10) {
-                printf("        Finished at level %d\n", cluster->level);
+                /*printf("        Finished at level %d\n", cluster->level);*/
                 continue;
             }
 
             //Alternate vertical and horizonatl cuts
-            t_axis cut_axis = X_AXIS;
-            if(cluster->level % 2 == 1) cut_axis = Y_AXIS;
+            t_axis cut_axis = Y_AXIS;
+            if(cluster->level % 2 == 1) cut_axis = X_AXIS;
+
+            char x_axis_name[50] = "X_AXIS cut";
+            char y_axis_name[50] = "Y_AXIS cut";
+
+            char* axis_name = x_axis_name;
+            if(cut_axis == Y_AXIS) axis_name = y_axis_name;
 
             //Splits the blocks and cluster into two sets
             t_region* region_A;
@@ -116,21 +139,36 @@ void lookahead_legalization(double gamma) {
             t_moveable_blocks* blocks_B;
             partition_cells(cut_axis, cluster, &region_A, &region_B, &blocks_A, &blocks_B);
 
+            set_block_set(blocks_A, A);
+            set_block_set(blocks_B, B);
+
+            g_CHIP->left_region = region_A;
+            g_CHIP->right_region = region_B;
 
             //Spread the cells in each region
             if(blocks_A->num_blocks > 0) {
-                t_cluster* cluster_A = legalize_cells_in_region(cut_axis, region_A, blocks_A, gamma);
+                /*printf("\tShifting A at level %d (%s)\n", cluster->level, axis_name);*/
+                t_cluster* cluster_A = legalize_cells_in_region(cut_axis, region_A, blocks_A, gamma, FALSE);
                 cluster_A->level = cluster->level + 1;
                 cluster_queue.push(cluster_A);
             }
 
             if(blocks_B->num_blocks > 0) {
-                t_cluster* cluster_B = legalize_cells_in_region(cut_axis, region_B, blocks_B, gamma);
+                /*printf("\tShifting B at level %d (%s)\n", cluster->level, axis_name);*/
+                t_cluster* cluster_B = legalize_cells_in_region(cut_axis, region_B, blocks_B, gamma, TRUE);
                 cluster_B->level = cluster->level + 1;
                 cluster_queue.push(cluster_B);
             }
+
+            g_CHIP->left_region = NULL;
+            g_CHIP->right_region = NULL;
+            
+            set_block_set(blocks_A, NONE);
+            set_block_set(blocks_B, NONE);
         }
     }
+    g_CHIP->expanded_region = NULL;
+    g_CHIP->base_region = NULL;
 }
 
 int add_legalized_position_pnets(double alpha) {
@@ -168,6 +206,7 @@ int add_legalized_position_pnets(double alpha) {
 
         new_legalized_anchor->num_pnets = 0;
         new_legalized_anchor->associated_pnets = NULL;
+        new_legalized_anchor->set = NONE;
 
         //Allocate the new pnet connecting the block and anchor
         create_anchor_block_pnet(block, new_legalized_anchor, alpha);
@@ -496,35 +535,35 @@ void partition_cells(t_axis cut_axis, t_cluster* cluster,
 }
 
 int compare_block_pos_x(const void* elem1, const void* elem2) {
-    t_block* block_a = (t_block*) elem1;
-    t_block* block_b = (t_block*) elem2;
+    t_block** block_a = (t_block**) elem1;
+    t_block** block_b = (t_block**) elem2;
 
-    double diff = block_b->x - block_a->x;
+    double diff = (*block_b)->x - (*block_a)->x;
 
     int ret_val;
     if (diff == 0.) {
         ret_val = 0; 
     } else if (diff > 0.) {
-        ret_val = 1;
-    } else { //diff < 0.
         ret_val = -1;
+    } else { //diff < 0.
+        ret_val = 1;
     }
 
     return ret_val;
 }
 int compare_block_pos_y(const void* elem1, const void* elem2) {
-    t_block* block_a = (t_block*) elem1;
-    t_block* block_b = (t_block*) elem2;
+    t_block** block_a = (t_block**) elem1;
+    t_block** block_b = (t_block**) elem2;
 
-    double diff = block_b->y - block_a->y;
+    double diff = (*block_b)->y - (*block_a)->y;
 
     int ret_val;
     if (diff == 0.) {
         ret_val = 0; 
     } else if (diff > 0.) {
-        ret_val = 1;
-    } else { //diff < 0.
         ret_val = -1;
+    } else { //diff < 0.
+        ret_val = 1;
     }
 
     return ret_val;
@@ -541,6 +580,25 @@ void sort_blocks(t_axis axis, t_moveable_blocks* moveable_blocks) {
         qsort(moveable_blocks->array_of_blocks, moveable_blocks->num_blocks, sizeof(t_block*), compare_block_pos_x);
     }
 
+    /*verify_sorted_order(axis, moveable_blocks);*/
+
+}
+
+void verify_sorted_order(t_axis cut_axis, t_moveable_blocks* blocks) {
+
+    assert(blocks->num_blocks >= 1);
+    t_block* prev = blocks->array_of_blocks[0];
+    for(int block_index = 1; block_index < blocks->num_blocks; block_index++) {
+        t_block* blk = blocks->array_of_blocks[block_index];
+
+        if(cut_axis == X_AXIS) {
+            assert(blk->y >= prev->y);
+        } else {
+            assert(blk->x >= prev->x);
+        }
+
+        prev = blk;
+    }
 }
 
 double find_cell_cut(t_axis cut_axis, t_cluster* cluster) {
@@ -641,7 +699,14 @@ double calc_area_cluster(t_cluster* cluster) {
     return calc_area_region(cluster->region);
 }
 
-t_cluster* legalize_cells_in_region(t_axis cut_axis, t_region* region, t_moveable_blocks* blocks, double gamma) {
+void set_block_set(t_moveable_blocks* blocks, t_set set) {
+    for(int blk_index = 0; blk_index < blocks->num_blocks; blk_index++) {
+        t_block* blk = blocks->array_of_blocks[blk_index];
+        blk->set = set;
+    }
+}
+
+t_cluster* legalize_cells_in_region(t_axis cut_axis, t_region* region, t_moveable_blocks* blocks, double gamma, t_boolean positive) {
     t_cluster* legal_cl = (t_cluster*) my_malloc(sizeof(t_cluster));
 
     legal_cl->region = region;
@@ -663,7 +728,8 @@ t_cluster* legalize_cells_in_region(t_axis cut_axis, t_region* region, t_moveabl
         region_height = region->y_max - region->y_min;
     }
 
-    strip_width = region_width/STRIP_WIDTH_FACTOR;
+    /*strip_width = region_width/STRIP_WIDTH_FACTOR;*/
+    strip_width = region_width/legal_cl->blocks->num_blocks;
     strip_height = region_height;
     strip_area = strip_width*strip_height;
 
@@ -675,7 +741,12 @@ t_cluster* legalize_cells_in_region(t_axis cut_axis, t_region* region, t_moveabl
         t_block* blk = blocks->array_of_blocks[blk_index];
 
         if(cut_axis == X_AXIS) {
-            double new_y_coord = region->y_min + strip_num*strip_width;
+            double new_y_coord;
+            if(positive) {
+                new_y_coord = region->y_max - strip_num*strip_width;
+            } else {
+                new_y_coord = region->y_min + strip_num*strip_width;
+            }
 
             assert(new_y_coord >= region->y_min);
             assert(new_y_coord <= region->y_max);
@@ -687,7 +758,12 @@ t_cluster* legalize_cells_in_region(t_axis cut_axis, t_region* region, t_moveabl
             strip_filled_area += g_CHIP->grid_area;
 
         } else {
-            double new_x_coord = region->x_min + strip_num*strip_width;
+            double new_x_coord;
+            if(positive) {
+                new_x_coord = region->x_max - strip_num*strip_width;
+            } else {
+                new_x_coord = region->x_min + strip_num*strip_width;
+            }
 
             assert(new_x_coord >= region->x_min);
             assert(new_x_coord <= region->x_max);
@@ -699,11 +775,10 @@ t_cluster* legalize_cells_in_region(t_axis cut_axis, t_region* region, t_moveabl
             strip_filled_area += g_CHIP->grid_area;
         }
 
-        if(strip_filled_area > gamma*strip_area) {
-            strip_num++;
-        }
+        strip_num++;
 
         blk_index++;
+        /*start_interactive_graphics();*/
     }
 
     return legal_cl; 

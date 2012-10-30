@@ -20,6 +20,7 @@ typedef enum e_boolean {FALSE = 0, TRUE} t_boolean;
 typedef enum e_block_type {PSEUDO = 1, REAL} t_block_type;
 typedef enum e_axies {X_AXIS = 0, Y_AXIS} t_axis;
 typedef enum e_side {LEFT = 0, RIGHT, TOP, BOTTOM } t_side;
+typedef enum e_set {NONE = 0, A, B} t_set;
 
 struct s_CHIP {
     int x_dim;
@@ -34,6 +35,11 @@ struct s_CHIP {
     double grid_area;
     int num_vert_grids;
     int num_horiz_grids;
+
+    t_region* expanded_region;
+    t_region* base_region;
+    t_region* left_region;
+    t_region* right_region;
 
 };
 
@@ -71,6 +77,8 @@ struct s_block {
 
     int num_pnets;
     t_pnet** associated_pnets; //[0..num_pnets-1]
+
+    t_set set;
 };
 
 /*

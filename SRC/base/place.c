@@ -68,8 +68,8 @@ double solve_simpl(void) {
         printf("    %% Overlap : %.4f\n", pct_overlap);
 
         iter_num++;
-        start_interactive_graphics();
     }
+    start_interactive_graphics();
     
     printf("Finished SimPL Placement\n");
 

@@ -20,6 +20,7 @@ void draw_block(t_block* block);
 void draw_pnet(t_pnet* pnet);
 void draw_flightline(t_block* block_from, t_block* block_to);
 void draw_gridsquare(t_gridsquare* gs);
+void draw_region(t_region* region);
 
 
 
@@ -65,7 +66,30 @@ void draw_screen(void) {
         draw_block(block);
     }
 
+    if(g_CHIP->base_region != NULL) {
+        setcolor(DARKGREEN);
+        draw_region(g_CHIP->base_region);
+        setcolor(BLACK);
 
+    }
+
+    if(g_CHIP->expanded_region != NULL) {
+        setcolor(RED);
+        draw_region(g_CHIP->expanded_region);
+        setcolor(BLACK);
+    }
+
+    if(g_CHIP->left_region != NULL) {
+        setcolor(BLUE);
+        draw_region(g_CHIP->left_region);
+        setcolor(BLACK);
+    }
+
+    if(g_CHIP->right_region != NULL) {
+        setcolor(CYAN);
+        draw_region(g_CHIP->right_region);
+        setcolor(BLACK);
+    }
 
 }
 
@@ -102,11 +126,17 @@ void draw_block(t_block* block) {
         setcolor(BLACK);
     }
 
+    if(block->set == A) {
+        setcolor(BLUE);
+    } else if (block->set == B) {
+        setcolor(CYAN);
+    }
     if(block->is_fixed) {
         fillrect(rect_l, rect_b, rect_r, rect_t);
     } else {
         drawrect(rect_l, rect_b, rect_r, rect_t);
     }
+    setcolor(BLACK);
 
     char buf[30];
     snprintf(buf, sizeof(buf), "%d", block->index);
@@ -122,7 +152,11 @@ void draw_flightline(t_block* from_block, t_block* to_block) {
 }
 
 void draw_gridsquare(t_gridsquare* gs){
-    setcolor(DARKGREEN);
+    setcolor(YELLOW);
     drawrect(gs->region->x_min, gs->region->y_min, gs->region->x_max, gs->region->y_max);
     setcolor(BLACK);
+}
+void draw_region(t_region* region){
+    drawrect(region->x_min, region->y_min, region->x_max, region->y_max);
+
 }

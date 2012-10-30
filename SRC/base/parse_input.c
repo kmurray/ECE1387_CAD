@@ -46,6 +46,10 @@ void parse_netlist(const char* filename) {
     g_CHIP->grid_area = g_CHIP->x_grid*g_CHIP->y_grid;
     g_CHIP->num_vert_grids = 0;
     g_CHIP->num_horiz_grids = 0;
+    g_CHIP->expanded_region = NULL;
+    g_CHIP->base_region = NULL;
+    g_CHIP->left_region = NULL;
+    g_CHIP->right_region = NULL;
 
     //Allocate the block list
     t_blocklist* blocklist = (t_blocklist*) my_malloc(sizeof(t_blocklist));
@@ -169,6 +173,7 @@ t_block* parse_block_conectivity(char* line) {
     block->associated_nets = NULL;
     block->num_pnets = 0;
     block->associated_pnets = NULL;
+    block->set = NONE;
 
     //Duplicate string first, since strtok destroys
     //the input string
