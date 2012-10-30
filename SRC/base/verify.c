@@ -5,6 +5,7 @@
 #include <math.h>
 #include <data_structs.h>
 #include <util.h>
+#include <lookahead_legalization.h>
 #include <verify.h>
 
 //================================================================================================
@@ -108,4 +109,29 @@ double evaluate_pnet_objective(t_pnet* pnet) {
     y_objective = pnet->weight_y*pow(dist, 2);
 
     return x_objective + y_objective;
+}
+
+double evaluate_overlap(void) {
+
+    t_gridsquare_list* gridsquare_list = build_gridsquare_list();
+
+    int total_num_moveable_blocks = 0;
+    int numerator = 0;
+    for(int gs_index = 0; gs_index < gridsquare_list->num_gridsquares; gs_index++) {
+        t_gridsquare* gs = gridsquare_list->array_of_gridsquares[gs_index];
+
+        t_moveable_blocks* moveable_blocks =  find_moveable_blocks_in_region(gs->region);
+
+        total_num_moveable_blocks += moveable_blocks->num_blocks;
+
+        if(moveable_blocks->num_blocks > 0) {
+            numerator += moveable_blocks->num_blocks - 1;
+        } else {
+            numerator += 0;
+        }
+
+    }
+
+    double pct_overlap = (float) numerator / total_num_moveable_blocks * 100;
+    return pct_overlap;
 }

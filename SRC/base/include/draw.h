@@ -3,8 +3,10 @@
 
 #include <graphics.h>
 
-#define BLOCK_LEN 0.1
+#define BLOCK_LEN_FACTOR 0.005
 #define WORLD_DIM_SCALE 0.06
+
+#define DRAW_BLOCK_NUM 0
 
 void start_interactive_graphics(void);
 void draw_screen(void);

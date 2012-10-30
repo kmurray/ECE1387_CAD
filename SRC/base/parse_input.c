@@ -17,7 +17,6 @@
 t_block* parse_block_conectivity(char* line);
 t_block* parse_fixed_positions(char* line);
 t_net* find_or_allocate_net(int net_index);
-void associate_block_and_net(t_block* block, t_net* net);
 void add_block_to_blocklist(t_block* block);
 t_block* get_block_by_index(int block_index);
 t_boolean my_readline(FILE* fp, char** line);
@@ -36,13 +35,21 @@ void parse_netlist(const char* filename) {
     printf("Parsing input file: %s\n", filename);
     FILE* fp = fopen(filename, "r");
 
-    //Allocate the chip structure
-    g_CHIP = my_malloc(sizeof(t_CHIP));
+    //Allocate the chip structure and initialize
+    g_CHIP = (t_CHIP*) my_malloc(sizeof(t_CHIP));
     g_CHIP->x_dim = 0;
     g_CHIP->y_dim = 0;
+    g_CHIP->blocklist = NULL;
+    g_CHIP->netlist = NULL;
+    g_CHIP->x_grid = 1.;
+    g_CHIP->y_grid = 1.;
+    g_CHIP->grid_area = g_CHIP->x_grid*g_CHIP->y_grid;
+    g_CHIP->num_vert_grids = 0;
+    g_CHIP->num_horiz_grids = 0;
 
     //Allocate the block list
-    t_blocklist* blocklist = my_malloc(sizeof(t_blocklist));
+    t_blocklist* blocklist = (t_blocklist*) my_malloc(sizeof(t_blocklist));
+    blocklist->pblock_start_index = -1;
     blocklist->num_blocks = 0;
     blocklist->array_of_blocks = NULL;
     /*blocklist->array_of_blocks = my_malloc(sizeof(t_net*));*/
@@ -50,7 +57,7 @@ void parse_netlist(const char* filename) {
     g_CHIP->blocklist = blocklist; //Add to global chip structure
 
     //Allocate the net list
-    t_netlist* netlist = my_malloc(sizeof(t_netlist));
+    t_netlist* netlist = (t_netlist*) my_malloc(sizeof(t_netlist));
     netlist->num_nets = 0;
     netlist->array_of_nets = NULL;
     /*netlist->array_of_nets = my_malloc(sizeof(t_net*));*/
@@ -91,7 +98,12 @@ void parse_netlist(const char* filename) {
 
             g_CHIP->x_dim = x_dim;
             g_CHIP->y_dim = y_dim;
+            g_CHIP->num_horiz_grids = (int) x_dim/g_CHIP->x_grid;
+            g_CHIP->num_vert_grids = (int) y_dim/g_CHIP->y_grid;
             printf("\tChip size %dx%d\n", x_dim, y_dim);
+            printf("\tChip grid size %fx%f\n", g_CHIP->x_grid, g_CHIP->y_grid);
+            printf("\tChip # Horiz grid squares %d\n", g_CHIP->num_horiz_grids);
+            printf("\tChip # Vert grid squares %d\n", g_CHIP->num_vert_grids);
 
         } else if (file_section == 1) {
 
@@ -146,7 +158,7 @@ t_block* parse_block_conectivity(char* line) {
     t_boolean seen_name = FALSE;
     t_boolean seen_blk_index = FALSE;
 
-    t_block* block = my_malloc(sizeof(t_block));
+    t_block* block = (t_block*) my_malloc(sizeof(t_block));
     //Initialization
     block->index = -1;
     block->name = NULL;
@@ -266,7 +278,7 @@ t_net* find_or_allocate_net(int net_index) {
 
     } else {
         //It doesn't exist, so allocate it
-        net = my_malloc(sizeof(t_net));
+        net = (t_net*) my_malloc(sizeof(t_net));
 
         //Initialize
         net->index = net_index;
@@ -282,8 +294,8 @@ t_net* find_or_allocate_net(int net_index) {
 
             //Expand the arrays
             netlist->num_nets = net_index;
-            netlist->array_of_nets = my_realloc(netlist->array_of_nets, sizeof(t_net*)*(netlist->num_nets + 1));
-            netlist->valid_nets = my_realloc(netlist->valid_nets, sizeof(t_boolean)*(netlist->num_nets + 1));
+            netlist->array_of_nets = (t_net**) my_realloc(netlist->array_of_nets, sizeof(t_net*)*(netlist->num_nets + 1));
+            netlist->valid_nets = (t_boolean*) my_realloc(netlist->valid_nets, sizeof(t_boolean)*(netlist->num_nets + 1));
 
             //Mark any new elements beyond old_num_nets as invalid
             //  This is needed to ensure unallocated nets are not referenced
@@ -308,12 +320,12 @@ t_net* find_or_allocate_net(int net_index) {
 void associate_block_and_net(t_block* block, t_net* net) {
     //Add this block to the nets associated block list
     net->num_blocks++;
-    net->associated_blocks = my_realloc(net->associated_blocks, sizeof(t_block*)*net->num_blocks);
+    net->associated_blocks = (t_block**) my_realloc(net->associated_blocks, sizeof(t_block*)*net->num_blocks);
     net->associated_blocks[net->num_blocks - 1] = block;
 
     //Add this net to the blocks associated net list
     block->num_nets++;
-    block->associated_nets = my_realloc(block->associated_nets, sizeof(t_net*)*block->num_nets);
+    block->associated_nets = (t_net**) my_realloc(block->associated_nets, sizeof(t_net*)*block->num_nets);
     block->associated_nets[block->num_nets - 1] = net;
 }
 
@@ -324,7 +336,7 @@ void add_block_to_blocklist(t_block* block) {
     t_blocklist* blocklist = g_CHIP->blocklist;
 
     blocklist->num_blocks++;
-    blocklist->array_of_blocks = my_realloc(blocklist->array_of_blocks, sizeof(t_block*)*(blocklist->num_blocks + 1));
+    blocklist->array_of_blocks = (t_block**) my_realloc(blocklist->array_of_blocks, sizeof(t_block*)*(blocklist->num_blocks + 1)); // +1 b/c indexed from 1..num_blocks
     blocklist->array_of_blocks[blocklist->num_blocks] = block;
 
     assert(blocklist->array_of_blocks[block->index] == block);
@@ -348,7 +360,7 @@ t_boolean my_readline(FILE* fp, char** line) {
     if(*line != NULL) {
         free(*line);
     }
-    char* buf = my_malloc(sizeof(char)*max_len);
+    char* buf = (char*) my_malloc(sizeof(char)*max_len);
 
     char ch = getc(fp);
     int cnt = 0;
@@ -356,7 +368,7 @@ t_boolean my_readline(FILE* fp, char** line) {
         //Expand buf if required
         if(cnt >= max_len - 1) {
             max_len *= 2;
-            buf = my_realloc(buf, max_len);
+            buf = (char*) my_realloc(buf, max_len);
         }
 
         buf[cnt] = ch;
@@ -380,8 +392,6 @@ t_boolean my_readline(FILE* fp, char** line) {
 void print_netlist_stats(void){
     t_blocklist* blocklist = g_CHIP->blocklist;
     t_netlist* netlist = g_CHIP->netlist;
-    printf("\tAdded %d Blocks\n", blocklist->num_blocks);
-    printf("\tAdded %d Nets\n", netlist->num_nets);
 
     t_net* highest_fanout_net = NULL;
     float avg_fanout = 0.;
@@ -402,19 +412,26 @@ void print_netlist_stats(void){
 
     avg_fanout /= netlist->num_nets;
 
-    printf("\tHighest Fanout Net is '%d' with fanout %d\n", highest_fanout_net->index, highest_fanout_net->num_blocks);
-    printf("\tAverage Fanout is %.2f blocks\n", avg_fanout);
-
+    int moveable_blk_cnt = 0;
     t_block* most_connected_block = NULL;
     float avg_block_connectivity = 0.;
     for(int block_index = 1; block_index <= blocklist->num_blocks; block_index++) {
         t_block* block = blocklist->array_of_blocks[block_index];
+
+        if(!block->is_fixed) moveable_blk_cnt++;
 
         if(most_connected_block == NULL || block->num_nets > most_connected_block->num_nets) {
             most_connected_block = block;
         }
         avg_block_connectivity += block->num_nets;
     }
+
+    printf("\tAdded %d Blocks (%d moveable)\n", blocklist->num_blocks, moveable_blk_cnt);
+    printf("\tAdded %d Nets\n", netlist->num_nets);
+
+    printf("\tHighest Fanout Net is '%d' with fanout %d\n", highest_fanout_net->index, highest_fanout_net->num_blocks);
+    printf("\tAverage Fanout is %.2f blocks\n", avg_fanout);
+
     avg_block_connectivity /= blocklist->num_blocks;
     printf("\tMost connected block is #%d '%s' connected to %d nets\n", most_connected_block->index, most_connected_block->name, most_connected_block->num_nets);
     printf("\tAverage connectivity is %.2f nets\n", avg_block_connectivity);

@@ -3,17 +3,18 @@
 //================================================================================================
 #include <assert.h>
 #include <math.h>
+#include <string.h>
 #include <data_structs.h>
 #include <util.h>
+#include <solver.h>
 #include <net_models.h>
 
 //================================================================================================
 // INTERNAL FUNCTION DECLARTAIONS 
 //================================================================================================
-t_pnet* create_pnet(double weight_x, double weight_y, t_block* block_a, t_block* block_b);
-void add_pnet_to_block(t_pnet* pnet, t_block* block);
 void remove_pnets_net(t_net* logical_net);
 void remove_pnets_block(t_block* block);
+void remove_pblock(t_block* blk);
 
 //Bound2Bound Net Model Functions
 void find_boundary_blocks(t_axis axis, t_net* logical_net, t_block** low_block, t_block** high_block);
@@ -52,7 +53,7 @@ int clique_model(t_net* logical_net) {
     logical_net->num_pnets = logical_net->num_blocks*(logical_net->num_blocks - 1)/2;
 
     //Allocate the pnet array
-    logical_net->equivalent_pnets = my_realloc(logical_net->equivalent_pnets, sizeof(t_pnet*)*logical_net->num_pnets);
+    logical_net->equivalent_pnets = (t_pnet**) my_realloc(logical_net->equivalent_pnets, sizeof(t_pnet*)*logical_net->num_pnets);
 
     int index_a;
     for(index_a = 0; index_a < logical_net->num_blocks - 1; index_a++) {
@@ -101,13 +102,14 @@ int bound2bound_model(t_net* logical_net) {
 
     //Reallocate the net's array of pnets
     logical_net->num_pnets = total_number_of_pnets_to_add;
-    logical_net->equivalent_pnets = my_realloc(logical_net->equivalent_pnets, sizeof(t_pnet*)*logical_net->num_pnets);
+    logical_net->equivalent_pnets = (t_pnet**) my_realloc(logical_net->equivalent_pnets, sizeof(t_pnet*)*logical_net->num_pnets);
 
     //Array index
     int num_pnets_added = 0;
 
     //Both axies
-    for(t_axis axis = X_AXIS; axis <= Y_AXIS; axis++) {
+    for(int int_axis = X_AXIS; int_axis <= Y_AXIS; int_axis++) {
+        t_axis axis = (t_axis) int_axis;
         //First find the boundary pins
         t_block* low_block = NULL;
         t_block* high_block = NULL;
@@ -206,16 +208,6 @@ t_pnet* create_b2b_pnet(t_axis axis, t_block* block_a, t_block* block_b, int fan
     assert(isfinite(weight_x));
     assert(isfinite(weight_y));
 
-    //Avoid extremely small weights
-    /*
-     *if(weight_x < B2B_SMALL_DOUBLE) {
-     *    weight_x = B2B_SMALL_DOUBLE;
-     *}
-     *if(weight_y < B2B_SMALL_DOUBLE) {
-     *    weight_y = B2B_SMALL_DOUBLE;
-     *}
-     */
-
     t_pnet* pnet = create_pnet(weight_x, weight_y, block_a, block_b);
     return pnet;
 }
@@ -256,7 +248,7 @@ void find_boundary_blocks(t_axis axis, t_net* logical_net, t_block** low_block, 
 
 t_pnet* create_pnet(double weight_x, double weight_y, t_block* block_a, t_block* block_b) {
     //The entry to set
-    t_pnet* pnet = my_malloc(sizeof(t_pnet));
+    t_pnet* pnet = (t_pnet*) my_malloc(sizeof(t_pnet));
 
     //Set the values
     pnet->block_a = block_a;
@@ -269,7 +261,7 @@ t_pnet* create_pnet(double weight_x, double weight_y, t_block* block_a, t_block*
 
 void add_pnet_to_block(t_pnet* pnet, t_block* block) {
     block->num_pnets++; 
-    block->associated_pnets = my_realloc(block->associated_pnets, sizeof(t_pnet*)*block->num_pnets);
+    block->associated_pnets = (t_pnet**) my_realloc(block->associated_pnets, sizeof(t_pnet*)*block->num_pnets);
 
     block->associated_pnets[block->num_pnets - 1] = pnet;
 }
@@ -278,8 +270,11 @@ void remove_all_pnets(void) {
     t_netlist* netlist = g_CHIP->netlist;
     t_blocklist* blocklist = g_CHIP->blocklist;
 
-    for(int net_index = 1; net_index <= netlist->num_nets; net_index++) {
+    //Including fake_net at index 0
+    for(int net_index = 0; net_index <= netlist->num_nets; net_index++) {
         t_net* logical_net = netlist->array_of_nets[net_index];
+        
+        if(logical_net == NULL && net_index == 0) continue;
 
         remove_pnets_net(logical_net);
     }
@@ -305,10 +300,48 @@ void remove_pnets_net(t_net* logical_net) {
 }
 
 void remove_pnets_block(t_block* block) {
+/*
+ *    for(int pnet_index = 0; pnet_index < block->num_pnets; pnet_index++) {
+ *        t_pnet* pnet = block->associated_pnets[pnet_index];
+ *
+ *        if(pnet != NULL) {
+ *            free(pnet);
+ *        }
+ *    }
+ */
     block->num_pnets = 0;
 
-    //Don't need to free the actual pnets (just the pointers) since they are freed by each logical net
+    //Free the array of associated pnets
     free(block->associated_pnets);
     block->associated_pnets = NULL;
     
+}
+
+void remove_all_pblocks(void) {
+    t_blocklist* blocklist = g_CHIP->blocklist;
+    if(blocklist->pblock_start_index != -1) {
+        blocklist->num_blocks = blocklist->pblock_start_index;
+        blocklist->array_of_blocks = (t_block**) my_realloc(blocklist->array_of_blocks, sizeof(t_block*)*blocklist->num_blocks + 1);
+        blocklist->pblock_start_index = -1;
+    }
+    /*if(blocklist->pblock_start_index != -1) {*/
+        /*for(int pblock_index = blocklist->pblock_start_index; pblock_index < blocklist->num_blocks; pblock_index++) {*/
+            /*t_block* blk = blocklist->array_of_blocks[pblock_index];*/
+            /*remove_pblock(blk);*/
+        /*}*/
+
+        /*blocklist->num_blocks = blocklist->pblock_start_index;*/
+        /*blocklist->array_of_blocks = (t_block**) my_realloc(blocklist->array_of_blocks, sizeof(t_block*)*blocklist->num_blocks);*/
+        /*blocklist->pblock_start_index = -1;*/
+    /*}*/
+}
+
+void remove_pblock(t_block* blk) {
+    assert(blk->index == -1);
+    
+    /*free(blk->name);*/
+    /*free(blk->associated_nets);*/
+    /*free(blk->associated_pnets);*/
+
+    /*free(blk);*/
 }

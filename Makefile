@@ -1,4 +1,4 @@
-CC = gcc
+CC = g++
 
 SRC_DIR = SRC/base
 INC_DIR = $(SRC_DIR)/include
@@ -23,7 +23,7 @@ WARN_FLAGS = -Wall
 OPT_FLAGS = -fPIC -O0
 INC_FLAGS = -I$(INC_DIR) -I$(LIB_DIR)/easygl -I$(X11_INCLUDE) $(UMFPACK_INCLUDE)
 
-CFLAGS =  -std=gnu99 $(DEBUG_FLAGS) $(WARN_FLAGS) $(OPT_FLAGS) $(INC_FLAGS)
+CFLAGS =  $(DEBUG_FLAGS) $(WARN_FLAGS) $(OPT_FLAGS) $(INC_FLAGS)
 
 EXEC = kplace
 

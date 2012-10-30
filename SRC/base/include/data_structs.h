@@ -9,10 +9,17 @@ typedef struct s_net t_net;
 typedef struct s_pnet t_pnet;
 typedef struct s_ccm t_ccm;
 typedef struct s_movable_blocks t_moveable_blocks;
+typedef struct s_clustered_gridsquares t_clustered_gridsquares;
+typedef struct s_gridsquare t_gridsquare;
+typedef struct s_gridsquare_list t_gridsquare_list;
+typedef struct s_clusterlist t_clusterlist;
+typedef struct s_cluster t_cluster;
+typedef struct s_region t_region;
 
 typedef enum e_boolean {FALSE = 0, TRUE} t_boolean;
 typedef enum e_block_type {PSEUDO = 1, REAL} t_block_type;
 typedef enum e_axies {X_AXIS = 0, Y_AXIS} t_axis;
+typedef enum e_side {LEFT = 0, RIGHT, TOP, BOTTOM } t_side;
 
 struct s_CHIP {
     int x_dim;
@@ -22,9 +29,16 @@ struct s_CHIP {
 
     t_netlist* netlist;
 
+    double x_grid;
+    double y_grid;
+    double grid_area;
+    int num_vert_grids;
+    int num_horiz_grids;
+
 };
 
 struct s_blocklist {
+    int pblock_start_index;
     int num_blocks;
     t_block** array_of_blocks; //[1..num_nets]
 };
@@ -100,6 +114,41 @@ struct s_ccm {
 struct s_movable_blocks {
     int num_blocks;
     t_block** array_of_blocks; //[0..num_blocks-1]
+};
+
+struct s_clusterlist {
+    int num_clusters;
+    t_cluster** array_of_clusters;
+};
+
+struct s_cluster {
+    t_region* region;
+    t_moveable_blocks* blocks;
+
+    int level;
+};
+
+struct s_clustered_gridsquares {
+    int num_clustered_gridsquares;
+    t_gridsquare_list** array_of_clustered_gridsquares;
+};
+
+struct s_gridsquare_list {
+    int num_gridsquares;
+    t_gridsquare** array_of_gridsquares;
+};
+struct s_gridsquare {
+    t_region* region;
+    int num_blocks;
+    t_block** array_of_blocks;
+    t_boolean is_clustered;
+};
+
+struct s_region {
+    double x_min;
+    double x_max;
+    double y_min;
+    double y_max;
 };
 
 extern t_CHIP* g_CHIP;

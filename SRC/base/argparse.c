@@ -29,7 +29,7 @@ static struct argp argp = {options, parse_opt, args_doc, doc};
 
 
 t_arguments* parse_args(int argc, char** argv){
-    t_arguments* args = my_malloc(sizeof(t_arguments));
+    t_arguments* args = (t_arguments*) my_malloc(sizeof(t_arguments));
 
     set_default_args(args);
     argp_parse(&argp, argc, argv, 0, 0, args);
@@ -42,7 +42,7 @@ t_arguments* parse_args(int argc, char** argv){
  * Argument parser
  */
 static error_t parse_opt(int key, char* arg, struct argp_state* state) {
-    t_arguments* arguments = state->input;
+    t_arguments* arguments = (t_arguments*) state->input;
 
     switch (key) {
         case 'v':

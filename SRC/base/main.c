@@ -20,13 +20,21 @@ int main (int argc, char** argv) {
     printf("Parsing Netlist...\n");
     parse_netlist(g_args->netlist_file);
     printf("DONE\n");
-
-    init_graphics("kplace graphics");
+    
+    char buf[50] = "kplace graphics";
+    init_graphics(buf);
     //start_interactive_graphics();
 
-    solve_clique();
+    if(0) {
+        //Quesiton 1.
+        solve_clique();
 
-    solve_bound2bound();
+        //Question 2.
+        solve_bound2bound();
+    }
+
+    //Quesiton 3.
+    solve_simpl();
 
     printf("\nTool Finished - exiting...\n");
     return 0;

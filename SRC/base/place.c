@@ -8,6 +8,7 @@
 #include <net_models.h>
 #include <solver.h>
 #include <verify.h>
+#include <lookahead_legalization.h>
 #include <place.h>
 
 
@@ -20,27 +21,63 @@ void dump_block_positions(void);
 // INTERNAL FUCTION IMPLIMENTATIONS
 //================================================================================================
 
-double solve_clique(void) {
-    printf("************* Start Clique Net Solve ************\n");
-    //Clean any previous operations
-    remove_all_pnets();
+double solve_simpl(void) {
+    printf("\n\n@@@@@@@@@@@@@ Start SimPL Solve @@@@@@@@@@@@\n\n");
+    //Initial Placement
+    solve_clique();
+    solve_bound2bound();
 
-    printf("    Generating Clique Net Model...\n");
-    int num_pnets = generate_pnets(&clique_model);
-    printf("    DONE\n");
-    printf("    Generated %d pnets\n", num_pnets);
+    //Global Placement
+    int iter_num = 0;
+    double pct_overlap;
+    double pct_hpwl_gap;
+    double objective_value;
 
-    start_interactive_graphics();
+    double gamma = SIMPL_GAMMA;
+    while(iter_num == 0 || pct_overlap > 20.) {
+        printf("\n############# Start SimPL Iteration #%d ############\n", iter_num);
+        double alpha = SIMPL_ALPHA_FAC*(1+iter_num);
 
-    //Call the solver
-    double objective_val = solve_system();
+        //Remove the pnets from previous iterations
+        remove_all_pnets(); 
+        remove_all_pblocks();
+        
+        //Quickly legalize cell positions
+        lookahead_legalization(gamma);
+        double legalized_hpwl = calc_hpwl_netlist(g_CHIP->netlist);
+        
+        //Create new bound2bound net model pnets
+        int num_b2b_pnets = generate_pnets(&bound2bound_model);
+        
+        //Add new fixed pnets that link cells to legalized positions
+        int num_legalization_pnets = add_legalized_position_pnets(alpha);
 
-    evaluate_qor();
+        //Re-solve the system
+        objective_value = solve_system();
+        double solved_hpwl = calc_hpwl_netlist(g_CHIP->netlist);
 
-    printf("*************  End Clique Net Solve  ************\n");
+        printf(  "############## End SimPL Iteration #%d #############\n", iter_num);
 
-    return objective_val;
+        pct_hpwl_gap = my_pct_diff(legalized_hpwl, solved_hpwl);
+        pct_overlap = evaluate_overlap();
+
+        printf("QOR:\n");
+        printf("    Legal  HPWL: %d %.4f\n", iter_num, legalized_hpwl);
+        printf("    Solved HPWL: %d %.4f\n", iter_num, solved_hpwl);
+        printf("    %% HPWL Gap: %.4f\n", pct_hpwl_gap);
+        printf("    %% Overlap : %.4f\n", pct_overlap);
+
+        iter_num++;
+        start_interactive_graphics();
+    }
+    
+    printf("Finished SimPL Placement\n");
+
+    printf("\n\n@@@@@@@@@@@@@ End SimPL Solve @@@@@@@@@@@@\n\n");
+    return objective_value;
 }
+
+
 
 double solve_bound2bound(void) {
     int iter_num = 0;
@@ -48,7 +85,7 @@ double solve_bound2bound(void) {
     double pct_diff_hpwl_old_hpwl;
     double objective_val;
     double hpwl;
-    double old_hpwl = calc_hpwl_netlist(g_CHIP->netlist);;
+    double old_hpwl = calc_hpwl_netlist(g_CHIP->netlist);
 
 #if DEBUG_MATRIX
     dump_block_positions();
@@ -79,7 +116,7 @@ double solve_bound2bound(void) {
 
         old_hpwl = hpwl;
 
-        printf("-------------  End Bound2Bound Iteration #%d  ------------\n", iter_num);
+        printf("-------------- End Bound2Bound Iteration #%d -------------\n", iter_num);
 
         evaluate_qor();
         printf("    HPWL and Objective %% diff: %.4f\n", pct_diff_obj_hpwl);
@@ -88,6 +125,29 @@ double solve_bound2bound(void) {
     }
     printf("\nBound2Bound Refinement Complete!\n");
     start_interactive_graphics();
+
+    return objective_val;
+}
+
+
+double solve_clique(void) {
+    printf("************* Start Clique Net Solve ************\n");
+    //Clean any previous operations
+    remove_all_pnets();
+
+    printf("    Generating Clique Net Model...\n");
+    int num_pnets = generate_pnets(&clique_model);
+    printf("    DONE\n");
+    printf("    Generated %d pnets\n", num_pnets);
+
+    start_interactive_graphics();
+
+    //Call the solver
+    double objective_val = solve_system();
+
+    evaluate_qor();
+
+    printf("************** End Clique Net Solve *************\n");
 
     return objective_val;
 }

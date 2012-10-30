@@ -14,7 +14,6 @@
 //================================================================================================
 // INTERNAL FUNCTION DECLARTAIONS 
 //================================================================================================
-t_moveable_blocks* find_num_moveable_objects(void);
 double get_connectivity_matrix_entry(t_axis axis, int row, int col, t_moveable_blocks* moveable_blocks);
 void build_connectivity_matrix(t_axis axis, t_moveable_blocks* moveable_blocks, t_ccm* Q);
 t_block* get_block_by_row_index(int row, t_moveable_blocks* moveable_blocks);
@@ -34,8 +33,8 @@ double solve_system(void) {
 
     //The connectivity matrix is valid for both X and Y solves
 
-    t_axis axis;
-    for(axis = X_AXIS; axis <= Y_AXIS; axis++) {
+    for(int int_axis = X_AXIS; int_axis <= Y_AXIS; int_axis++) {
+        t_axis axis = (t_axis) int_axis;
 
         if(axis == X_AXIS) {
             DEBUG_PRINT(EXTRA_INFO, "\n    Solving X-Axis System\n");
@@ -44,7 +43,7 @@ double solve_system(void) {
         }
 
         DEBUG_PRINT(EXTRA_INFO, "\tGenerating Connectivity Matrix...\n");
-        t_ccm* Q = my_malloc(sizeof(t_ccm));
+        t_ccm* Q = (t_ccm*) my_malloc(sizeof(t_ccm));
         build_connectivity_matrix(axis, moveable_blocks, Q);
         DEBUG_PRINT(EXTRA_INFO, "\tDONE\n");
 
@@ -88,7 +87,7 @@ void update_block_locations(t_axis axis, t_moveable_blocks* moveable_blocks, dou
             block->y = x[block_index];
         }
     }
-    draw_screen();
+    //draw_screen();
 }
 
 void call_solver(t_ccm* Q, double* x, double* b) {
@@ -149,11 +148,11 @@ void call_solver(t_ccm* Q, double* x, double* b) {
 t_moveable_blocks* find_num_moveable_objects(void) {
     t_blocklist* blocklist = g_CHIP->blocklist;
 
-    t_moveable_blocks* moveable_blocks = my_malloc(sizeof(t_moveable_blocks));
+    t_moveable_blocks* moveable_blocks = (t_moveable_blocks*) my_malloc(sizeof(t_moveable_blocks));
 
     //Initialize
     moveable_blocks->num_blocks = 0;
-    moveable_blocks->array_of_blocks = my_calloc(sizeof(t_block*), blocklist->num_blocks); //Max size initially will shrink real num_blocks is known
+    moveable_blocks->array_of_blocks = (t_block**) my_calloc(sizeof(t_block*), blocklist->num_blocks); //Max size initially will shrink real num_blocks is known
 
 
     int block_index;
@@ -166,7 +165,7 @@ t_moveable_blocks* find_num_moveable_objects(void) {
         }
     }
     //Fix sizing
-    moveable_blocks->array_of_blocks = my_realloc(moveable_blocks->array_of_blocks, sizeof(t_block*)*moveable_blocks->num_blocks); //Max size initially will shrink real num_blocks is known
+    moveable_blocks->array_of_blocks = (t_block**) my_realloc(moveable_blocks->array_of_blocks, sizeof(t_block*)*moveable_blocks->num_blocks); //Max size initially will shrink real num_blocks is known
 
     return moveable_blocks;
 }
@@ -179,13 +178,13 @@ void build_connectivity_matrix(t_axis axis, t_moveable_blocks* moveable_blocks, 
     Q->num_cols = moveable_blocks->num_blocks;
 
     //One more than dimension, so we don't over-run the array
-    Q->col_ptrs = my_calloc(sizeof(int), Q->num_cols+1);
+    Q->col_ptrs = (int*) my_calloc(sizeof(int), Q->num_cols+1);
 
     //Initially assume that all elements are non-zero
     // We will re-allocate once we know the actual numbers
     Q->num_values = Q->num_rows*Q->num_cols;
-    Q->row_indexs = my_calloc(sizeof(int), Q->num_values);
-    Q->values = my_calloc(sizeof(double), Q->num_values);
+    Q->row_indexs = (int*) my_calloc(sizeof(int), Q->num_values);
+    Q->values = (double*) my_calloc(sizeof(double), Q->num_values);
 
     int val_index = 0; //Current index into Q->values
 
@@ -250,8 +249,8 @@ void build_connectivity_matrix(t_axis axis, t_moveable_blocks* moveable_blocks, 
     Q->num_values = val_index;
 
     //Shrink the arrays down to the actual size
-    Q->row_indexs = my_realloc(Q->row_indexs, sizeof(int)*Q->num_values);
-    Q->values = my_realloc(Q->values, sizeof(double)*Q->num_values);
+    Q->row_indexs = (int*) my_realloc(Q->row_indexs, sizeof(int)*Q->num_values);
+    Q->values = (double*) my_realloc(Q->values, sizeof(double)*Q->num_values);
 
     //col_ptr is indexed from [0..Q->num_cols]
     // where j is the column #:
@@ -294,7 +293,7 @@ double get_entry(t_ccm* M, int row, int col) {
 }
 
 double* build_anchoring_vector(t_axis axis, t_moveable_blocks* moveable_blocks){
-    double* b = my_calloc(sizeof(double), moveable_blocks->num_blocks);
+    double* b = (double*) my_calloc(sizeof(double), moveable_blocks->num_blocks);
 
     int row_index;
     for(row_index = 0; row_index < moveable_blocks->num_blocks; row_index++) {
