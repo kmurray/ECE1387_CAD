@@ -25,17 +25,23 @@ int main (int argc, char** argv) {
     init_graphics(buf);
     //start_interactive_graphics();
 
-    if(0) {
+    if(g_args->clique) {
         //Quesiton 1.
         solve_clique();
+    }
 
+    if(g_args->bound2bound) {
         //Question 2.
-        solve_bound2bound();
+        solve_clique();
+        solve_bound2bound(1.);
     }
 
     //Quesiton 3.
-    solve_simpl();
+    if(g_args->simpl) {
+        solve_simpl();
+    }
 
+    start_interactive_graphics();
     printf("\nTool Finished - exiting...\n");
     return 0;
 }

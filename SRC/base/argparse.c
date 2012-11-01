@@ -21,7 +21,11 @@ static struct argp_option options[] = {
     {"verbosity", 'v', "VERBOSITY", 0, "Print more detailed information"},
     {"circuit", 'c', "NETLIST_FILE", 0, "The input circuit netlist file"},
     {"draw_nets", 'n', 0, 0, "Draw net flightlines"},
-    {"opt_reservoirs", 'o', 0, 0, "Turn on reservoir optimization. May impact routability and runtime."},
+    {"interactive_iteration_graphics", 'i', 0, 0, "Turn on interactive graphics at the end of each simpl stage"},
+    {"interactive_spreading_graphics", 'g', 0, 0, "Turn on interactive graphics which illustrate the spreading technique"},
+    {"clique", 'q', 0, 0, "Place the circuit using the clique net model"},
+    {"bound2bound", 'b', 0, 0, "Place the circuit using the bound2bound net model"},
+    {"simpl", 's', 0, 0, "Place the circuit using a modified version of the simPL algorithm"},
     {0}
 };
 
@@ -57,6 +61,18 @@ static error_t parse_opt(int key, char* arg, struct argp_state* state) {
         case 'n':
             arguments->draw_nets = 1;
             break;
+        case 'q':
+            arguments->clique = 1;
+            break;
+        case 'b':
+            arguments->bound2bound = 1;
+            break;
+        case 's':
+            arguments->simpl = 1;
+            break;
+        case 'g':
+            arguments->spreading_graphics = 1;
+            break;
         case ARGP_KEY_END:
             //Check for required arguments
             if(check_args(arguments) != 1) {
@@ -73,6 +89,10 @@ static void set_default_args(t_arguments* args) {
     args->netlist_file = NULL;
     args->interactive_graphics = 0;
     args->draw_nets = 0;
+    args->clique = 0;
+    args->bound2bound = 0;
+    args->simpl = 0;
+    args->spreading_graphics = 0;
 }
 
 

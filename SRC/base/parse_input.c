@@ -50,6 +50,7 @@ void parse_netlist(const char* filename) {
     g_CHIP->base_region = NULL;
     g_CHIP->left_region = NULL;
     g_CHIP->right_region = NULL;
+    g_CHIP->cl_list = NULL;
 
     //Allocate the block list
     t_blocklist* blocklist = (t_blocklist*) my_malloc(sizeof(t_blocklist));

@@ -36,6 +36,8 @@ struct s_CHIP {
     int num_vert_grids;
     int num_horiz_grids;
 
+    t_clusterlist* cl_list;
+
     t_region* expanded_region;
     t_region* base_region;
     t_region* left_region;
@@ -79,6 +81,8 @@ struct s_block {
     t_pnet** associated_pnets; //[0..num_pnets-1]
 
     t_set set;
+
+    double abs_diff_to_cutline;
 };
 
 /*
@@ -131,6 +135,7 @@ struct s_clusterlist {
 
 struct s_cluster {
     t_region* region;
+    t_region* orig_region;
     t_moveable_blocks* blocks;
 
     int level;

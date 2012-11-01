@@ -22,6 +22,7 @@ void draw_flightline(t_block* block_from, t_block* block_to);
 void draw_gridsquare(t_gridsquare* gs);
 void draw_region(t_region* region);
 
+void draw_clusters(t_clusterlist* cl_list);
 
 
 //=============================================================================
@@ -48,7 +49,7 @@ void draw_screen(void) {
     for(int gs_index = 0; gs_index < gs_list->num_gridsquares; gs_index++) {
         t_gridsquare* gs = gs_list->array_of_gridsquares[gs_index];
 
-        draw_gridsquare(gs);
+        /*draw_gridsquare(gs);*/
     }
 
     //World limits
@@ -66,29 +67,35 @@ void draw_screen(void) {
         draw_block(block);
     }
 
-    if(g_CHIP->base_region != NULL) {
-        setcolor(DARKGREEN);
-        draw_region(g_CHIP->base_region);
-        setcolor(BLACK);
+    if(g_args->simpl) {
+        if(g_CHIP->base_region != NULL) {
+            setcolor(DARKGREEN);
+            draw_region(g_CHIP->base_region);
+            setcolor(BLACK);
 
-    }
+        }
 
-    if(g_CHIP->expanded_region != NULL) {
-        setcolor(RED);
-        draw_region(g_CHIP->expanded_region);
-        setcolor(BLACK);
-    }
+        if(g_CHIP->expanded_region != NULL) {
+            setcolor(RED);
+            draw_region(g_CHIP->expanded_region);
+            setcolor(BLACK);
+        }
 
-    if(g_CHIP->left_region != NULL) {
-        setcolor(BLUE);
-        draw_region(g_CHIP->left_region);
-        setcolor(BLACK);
-    }
+        if(g_CHIP->left_region != NULL) {
+            setcolor(BLUE);
+            draw_region(g_CHIP->left_region);
+            setcolor(BLACK);
+        }
 
-    if(g_CHIP->right_region != NULL) {
-        setcolor(CYAN);
-        draw_region(g_CHIP->right_region);
-        setcolor(BLACK);
+        if(g_CHIP->right_region != NULL) {
+            setcolor(CYAN);
+            draw_region(g_CHIP->right_region);
+            setcolor(BLACK);
+        }
+
+        if(g_CHIP->cl_list != NULL) {
+            draw_clusters(g_CHIP->cl_list);
+        }
     }
 
 }
@@ -158,5 +165,19 @@ void draw_gridsquare(t_gridsquare* gs){
 }
 void draw_region(t_region* region){
     drawrect(region->x_min, region->y_min, region->x_max, region->y_max);
+
+}
+
+void draw_clusters(t_clusterlist* cl_list) {
+
+    for(int cl_index = 0; cl_index < cl_list->num_clusters; cl_index++) {
+        t_cluster* cl = cl_list->array_of_clusters[cl_index];
+
+        setcolor(DARKGREEN);
+        draw_region(cl->orig_region);
+        setcolor(RED);
+        draw_region(cl->region);
+        setcolor(BLACK);
+    }
 
 }

@@ -14,6 +14,10 @@ typedef struct s_arguments {
     char* netlist_file;     // The input netlist file
     int interactive_graphics;
     int draw_nets;
+    int clique;
+    int bound2bound;
+    int simpl;
+    int spreading_graphics;
 } t_arguments;
 
 

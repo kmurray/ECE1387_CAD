@@ -9,6 +9,7 @@
 #include <solver.h>
 #include <verify.h>
 #include <lookahead_legalization.h>
+#include <argparse.h>
 #include <place.h>
 
 
@@ -25,7 +26,16 @@ double solve_simpl(void) {
     printf("\n\n@@@@@@@@@@@@@ Start SimPL Solve @@@@@@@@@@@@\n\n");
     //Initial Placement
     solve_clique();
-    solve_bound2bound();
+    solve_bound2bound(1.);
+
+    int ps_cnt = 0;
+
+    char buf[100];
+    snprintf(buf, sizeof(buf), "%s.%d.ps", g_args->netlist_file, ps_cnt);
+    init_postscript(buf);
+    draw_screen();
+    close_postscript();
+    ps_cnt++;
 
     //Global Placement
     int iter_num = 0;
@@ -33,17 +43,38 @@ double solve_simpl(void) {
     double pct_hpwl_gap;
     double objective_value;
 
+    //Remove the pnets from previous iterations
+    remove_all_pnets(); 
+    remove_all_pblocks();
+
     double gamma = SIMPL_GAMMA;
-    while(iter_num == 0 || pct_overlap > 20.) {
+    while((iter_num == 0 || pct_overlap > 20.) && iter_num < 15) {
         printf("\n############# Start SimPL Iteration #%d ############\n", iter_num);
         double alpha = SIMPL_ALPHA_FAC*(1+iter_num);
 
-        //Remove the pnets from previous iterations
-        remove_all_pnets(); 
-        remove_all_pblocks();
         
         //Quickly legalize cell positions
-        lookahead_legalization(gamma);
+        double pct_legal_overlap = evaluate_overlap();
+        printf("Initial overlap: %.2f\n", pct_legal_overlap);
+        int legalizer_iterations = 0;
+        double max_cluster_size = g_CHIP->x_dim*g_CHIP->y_dim;
+        double max_expansion_size = g_CHIP->x_dim*g_CHIP->y_dim;
+        while(pct_legal_overlap > 20. && legalizer_iterations < 20) {
+            lookahead_legalization(gamma, max_cluster_size, max_expansion_size);
+            pct_legal_overlap = evaluate_overlap();
+            printf("Lookahead legalization iteration %d overlap: %.2f (max_cluster: %.2f max_expansion: %.2f)\n", legalizer_iterations, pct_legal_overlap, max_cluster_size, max_expansion_size);
+
+            if(legalizer_iterations > 5 && legalizer_iterations %3 == 0) {
+                max_cluster_size /= 2;
+                if(max_cluster_size < 1.) max_cluster_size = 1;
+
+                max_expansion_size /= 2;
+                if(max_expansion_size < 150.) max_expansion_size = 150;
+            }
+
+            legalizer_iterations++;
+
+        }
         double legalized_hpwl = calc_hpwl_netlist(g_CHIP->netlist);
         
         //Create new bound2bound net model pnets
@@ -56,22 +87,41 @@ double solve_simpl(void) {
         objective_value = solve_system();
         double solved_hpwl = calc_hpwl_netlist(g_CHIP->netlist);
 
-        printf(  "############## End SimPL Iteration #%d #############\n", iter_num);
 
         pct_hpwl_gap = my_pct_diff(legalized_hpwl, solved_hpwl);
+    
+        /*if(pct_hpwl_gap > 50.) solve_bound2bound(10.);*/
+
         pct_overlap = evaluate_overlap();
 
+        printf(  "############## End SimPL Iteration #%d #############\n", iter_num);
         printf("QOR:\n");
-        printf("    Legal  HPWL: %d %.4f\n", iter_num, legalized_hpwl);
-        printf("    Solved HPWL: %d %.4f\n", iter_num, solved_hpwl);
+        printf("    Legal  HPWL: %.4f\n", legalized_hpwl);
+        printf("    Solved HPWL: %.4f\n", solved_hpwl);
         printf("    %% HPWL Gap: %.4f\n", pct_hpwl_gap);
         printf("    %% Overlap : %.4f\n", pct_overlap);
 
+        //Remove the pnets from previous iterations
+        remove_all_pnets(); 
+        remove_all_pblocks();
+
+        draw_screen();
+        if(g_args->interactive_graphics) {
+            start_interactive_graphics();
+        }
         iter_num++;
+
+        snprintf(buf, sizeof(buf), "%s.%d.ps", g_args->netlist_file, ps_cnt);
+        init_postscript(buf);
+        draw_screen();
+        close_postscript();
+        ps_cnt++;
     }
-    start_interactive_graphics();
+    remove_all_pnets(); 
+    remove_all_pblocks();
     
     printf("Finished SimPL Placement\n");
+    start_interactive_graphics();
 
     printf("\n\n@@@@@@@@@@@@@ End SimPL Solve @@@@@@@@@@@@\n\n");
     return objective_value;
@@ -79,7 +129,7 @@ double solve_simpl(void) {
 
 
 
-double solve_bound2bound(void) {
+double solve_bound2bound(double target_pct_diff) {
     int iter_num = 0;
     double pct_diff_obj_hpwl;
     double pct_diff_hpwl_old_hpwl;
@@ -91,7 +141,7 @@ double solve_bound2bound(void) {
     dump_block_positions();
 #endif
 
-    while(iter_num == 0 || pct_diff_hpwl_old_hpwl > 1) {
+    while(iter_num == 0 || pct_diff_hpwl_old_hpwl > target_pct_diff) {
         printf("\n------------- Start Bound2Bound Iteration #%d ------------\n", iter_num);
 
         printf("    Removing Previous pnets\n");
@@ -124,7 +174,7 @@ double solve_bound2bound(void) {
         iter_num++;
     }
     printf("\nBound2Bound Refinement Complete!\n");
-    start_interactive_graphics();
+    /*start_interactive_graphics();*/
 
     return objective_val;
 }
@@ -149,6 +199,7 @@ double solve_clique(void) {
 
     printf("************** End Clique Net Solve *************\n");
 
+    start_interactive_graphics();
     return objective_val;
 }
 

@@ -3,7 +3,7 @@
         
 #define STRIP_WIDTH_FACTOR 10.
 
-void lookahead_legalization(double gamma);
+void lookahead_legalization(double gamma, double max_cluster_size, double max_expansion_size);
 
 int add_legalized_position_pnets(double alpha);
 
