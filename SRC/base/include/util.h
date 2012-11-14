@@ -24,6 +24,12 @@ double my_abs(double a);
 
 double my_pct_diff(double orig_val, double new_val);
 
+double binomial_coefficient(double n, double k);
+
+double fact(double n);
+
+int rand_in_range(int n);
+
 void die (const char * format, ...);
 
 #endif

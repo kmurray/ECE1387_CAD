@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <util.h>
 #include <assert.h>
 #include <data_structs.h>
@@ -32,7 +33,7 @@ void* my_calloc(size_t num_items, size_t size_of_item) {
 }
 
 double my_abs(double a) {
-    if(a >= 0) {
+    if(a >= 0.) {
         return a;
     } else {
         return -1*a;
@@ -43,6 +44,26 @@ double my_pct_diff(double orig_val, double new_val) {
     double diff = my_abs(orig_val - new_val);
 
     return diff/orig_val*100;
+}
+
+double binomial_coefficient(double n, double k) {
+    return fact(n)/(fact(k)*fact(n-k));
+}
+
+double fact(double n) {
+    assert(n >= 0);
+    if(n == 0) {
+        return 1;
+    }
+    double result = n;
+    for(double i = n - 1; i > 0; i--) {
+        result *= i;
+    }
+    return result;
+}
+
+int rand_in_range(int n) {
+    return rand() / (RAND_MAX / n + 1);
 }
 
 void die (const char * format, ...) {

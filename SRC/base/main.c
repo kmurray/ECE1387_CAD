@@ -1,10 +1,14 @@
 #include <data_structs.h>
+#include <util.h>
 #include <argparse.h>
 #include <parse_input.h>
+#include <initial_solution.h>
+#include <branch_and_bound.h>
 #include <draw.h>
 
-//the global CHIP data sturcture
-t_CHIP* g_CHIP;
+//the global data sturctures
+t_block_map g_blocklist;
+t_net_map g_netlist;
 
 //Argument parsing stuff
 extern struct argp argp;
@@ -21,8 +25,13 @@ int main (int argc, char** argv) {
     char buf[50] = "kpartition graphics";
     init_graphics(buf);
     //start_interactive_graphics();
+    
 
-    start_interactive_graphics();
+    t_bbnode* initial_solution = find_initial_solution();
+
+    solve_bnb(initial_solution);
+
+    //start_interactive_graphics();
     printf("\nTool Finished - exiting...\n");
     return 0;
 }

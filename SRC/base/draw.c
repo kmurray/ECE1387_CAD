@@ -21,8 +21,8 @@ extern t_arguments* g_args;
 // Function Implimentations
 //=============================================================================
 void start_interactive_graphics(void) {
-    world_dim_x = g_CHIP->x_dim;
-    world_dim_y = g_CHIP->y_dim;
+    world_dim_x = 100;
+    world_dim_y = 100;
 
     init_world(-1*world_dim_x*WORLD_DIM_SCALE, world_dim_y*(1 + WORLD_DIM_SCALE), world_dim_x*(1 + WORLD_DIM_SCALE), -1*world_dim_y*WORLD_DIM_SCALE);
     update_message(g_args->netlist_file);
