@@ -13,7 +13,7 @@ HEADERS_EASYGL = $(wildcard $(LIB_DIR)/easygl/*.h)
 HEADERS = $(wildcard $(INC_DIR)/*.h) $(HEADERS_EASYGL) $(HEADERS_UMFPACK)
 
 OBJS_EASYGL = $(patsubst $(LIB_DIR)/easygl/%.c, $(OBJ_DIR)/%.o,$(wildcard $(LIB_DIR)/easygl/*c))
-OBJS = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o,$(wildcard $(SRC_DIR)/*c))
+OBJS = $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o,$(wildcard $(SRC_DIR)/*cpp))
 
 DEBUG_FLAGS = -g
 WARN_FLAGS = -Wall
@@ -29,7 +29,7 @@ all: $(EXEC) tags
 $(EXEC): $(OBJS) $(OBJS_EASYGL)
 	$(CC) $(CFLAGS) -o $@ $^ $(LIB_PATH) $(LIB)
 
-$(OBJS): $(OBJ_DIR)/%.o:$(SRC_DIR)/%.c $(HEADERS) $(OBJ_DIR)
+$(OBJS): $(OBJ_DIR)/%.o:$(SRC_DIR)/%.cpp $(HEADERS) $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(OBJS_EASYGL): $(OBJ_DIR)/%.o:$(LIB_DIR)/easygl/%.c $(HEADERS) $(OBJ_DIR)
