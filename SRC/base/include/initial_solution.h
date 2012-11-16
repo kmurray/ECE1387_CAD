@@ -12,6 +12,7 @@
 // GLOBAL FUNCTION DECLARATIONS 
 //================================================================================================
 t_bbnode* find_initial_solution();
+void add_block_from_freelist(t_block* block, t_side side, t_bbnode* bbnode);
 
 //================================================================================================
 // PREPROCESSOR DEFINES 

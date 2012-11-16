@@ -233,7 +233,9 @@ void print_netlist_stats(void){
 
     //Serach space info
     assert(g_blocklist.size() % 2 == 0); //Must be an even number of blocks to partition evenly
-    double num_solns = binomial_coefficient((float) g_blocklist.size(), (float) g_blocklist.size() / 2);
+    //Number of possilbe left/right solutions is    : C(n,n/2)
+    // But number of unique solutions is            : C(n,n/2)/2  since left and right are equivalent          
+    double num_solns = binomial_coefficient((float) g_blocklist.size(), (float) g_blocklist.size() / 2) / 2;
 
     printf("\tAdded %zu Blocks\n", g_blocklist.size());
     printf("\tAdded %zu Nets\n", g_netlist.size());

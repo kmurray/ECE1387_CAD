@@ -1,10 +1,10 @@
 #ifndef DRAW_H
 #define DRAW_H
 
-#include <graphics.h>
+#define BOX_LEN 0.01
+#define WORLD_DIM_SCALE 0.03
 
-#define BLOCK_LEN_FACTOR 0.005
-#define WORLD_DIM_SCALE 0.06
+#include <graphics.h>
 
 void start_interactive_graphics(void);
 void draw_screen(void);

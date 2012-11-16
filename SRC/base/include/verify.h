@@ -1,5 +1,5 @@
-#ifndef BRANCH_AND_BOUND_H
-#define BRANCH_AND_BOUND_H
+#ifndef VERIFY_H
+#define VERIFY_H
 //================================================================================================
 // INCLUDES 
 //================================================================================================
@@ -11,7 +11,11 @@
 //================================================================================================
 // GLOBAL FUNCTION DECLARATIONS 
 //================================================================================================
-t_bbnode* solve_bnb(t_bbnode* initial_solution);
+int evaluate_solution(t_bbnode* soln);
+int evaluate_partial_solution_fixed_only(t_bbnode* soln);
+
+void dump_solution(t_bbnode* soln);
+void dump_block_map(t_block_map blk_map);
 
 //================================================================================================
 // PREPROCESSOR DEFINES 
